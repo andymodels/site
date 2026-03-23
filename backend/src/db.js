@@ -2,12 +2,13 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-const DB_PATH = process.env.DB_PATH
-  || (process.env.RENDER ? '/data/andy_models.db' : path.join(__dirname, '../../data/andy_models.db'));
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../../data/andy_models.db');
 const DATA_DIR = path.dirname(DB_PATH);
 
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+try {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+} catch (e) {
+  console.warn('[db] Aviso: não criou diretório do banco:', e.message);
 }
 
 const db = new Database(DB_PATH);

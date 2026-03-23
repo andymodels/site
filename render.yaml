@@ -29,11 +29,3 @@ services:
         value: 1lVPjjCSQrlMaqa5L41uQOuCP8mOOVtGjdSB2jl4soag
       - key: DRIVE_SYNC_IMAGES
         value: "false"
-      - key: UPLOADS_DIR
-        value: /data/uploads
-      - key: DB_PATH
-        value: /data/andy_models.db
-    disk:
-      name: andy-models-data
-      mountPath: /data
-      sizeGB: 10
