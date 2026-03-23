@@ -5,7 +5,7 @@ const fs = require('fs');
 const FALLBACK_PATH = path.join(__dirname, '../../data/andy_models.db');
 
 function resolveDbPath() {
-  const requested = process.env.DB_PATH;
+  const requested = undefined;
   if (!requested) return FALLBACK_PATH;
   const dir = path.dirname(requested);
   try {
