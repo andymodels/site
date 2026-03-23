@@ -54,14 +54,23 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 
 // ── Serve React frontend in production ────────────────────────────────────────
 const DIST = path.join(__dirname, '../../frontend/dist');
-if (fs.existsSync(DIST)) {
+const DIST_INDEX = path.join(DIST, 'index.html');
+const hasDist = fs.existsSync(DIST_INDEX);
+
+console.log('[server] DIST path:', DIST);
+console.log('[server] Frontend dist found:', hasDist);
+
+if (hasDist) {
   app.use(express.static(DIST));
   app.get('*', (req, res) => {
     if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
-      res.sendFile(path.join(DIST, 'index.html'));
+      res.sendFile(DIST_INDEX);
     }
   });
-  console.log('[server] Serving React frontend from', DIST);
+} else {
+  app.get('/', (req, res) => {
+    res.status(503).send('Frontend not built. Check build command: cd frontend && npm install && npm run build');
+  });
 }
 
 app.listen(config.port, () => {
