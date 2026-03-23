@@ -19,11 +19,9 @@ module.exports = {
   adminPassword: process.env.ADMIN_PASSWORD,
   adminSecret: process.env.ADMIN_SECRET,
   storageDriver: process.env.STORAGE_DRIVER || 'local',
-  uploadsDir: process.env.UPLOADS_DIR
-    || (process.env.RENDER ? '/data/uploads' : path.join(__dirname, '../../uploads')),
+  uploadsDir: process.env.UPLOADS_DIR || path.join(__dirname, '../../uploads'),
   uploadsUrl: process.env.UPLOADS_URL || '/uploads',
-  dbPath: process.env.DB_PATH
-    || (process.env.RENDER ? '/data/andy_models.db' : path.join(__dirname, '../../data/andy_models.db')),
+  dbPath: process.env.DB_PATH || path.join(__dirname, '../../data/andy_models.db'),
   drive: {
     folderFeminino: process.env.DRIVE_FOLDER_FEMININO || '15Tc0AC60g_67Gd-EujSu2eWGm8I-78bn',
     folderMasculino: process.env.DRIVE_FOLDER_MASCULINO || '1LgDoGg9deOLOjhRtZaLBM6QgTyH3FlEt',
