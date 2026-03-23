@@ -2,23 +2,12 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-const FALLBACK_PATH = path.join(__dirname, '../../data/andy_models.db');
+const DB_PATH = (function () {
+  const p = path.join(__dirname, '../../data/andy_models.db');
+  try { fs.mkdirSync(path.dirname(p), { recursive: true }); } catch (_) {}
+  return p;
+})();
 
-function resolveDbPath() {
-  const requested = undefined;
-  if (!requested) return FALLBACK_PATH;
-  const dir = path.dirname(requested);
-  try {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    return requested;
-  } catch (e) {
-    console.warn(`[db] Sem permissão em ${dir}, usando fallback: ${FALLBACK_PATH}`);
-    try { fs.mkdirSync(path.dirname(FALLBACK_PATH), { recursive: true }); } catch (_) {}
-    return FALLBACK_PATH;
-  }
-}
-
-const DB_PATH = resolveDbPath();
 const db = new Database(DB_PATH);
 console.log('[db] Banco de dados:', DB_PATH);
 
@@ -63,7 +52,6 @@ db.exec(`
   )
 `);
 
-// migrate existing table if columns are missing
 ['state TEXT', 'instagram TEXT', 'photos TEXT DEFAULT \'[]\''].forEach(col => {
   try { db.exec(`ALTER TABLE applications ADD COLUMN ${col}`); } catch {}
 });
@@ -75,13 +63,12 @@ db.exec(`
   )
 `);
 
-// migrate models table
 ['drive_folder_id TEXT', 'drive_synced_at TEXT', "sync_status TEXT DEFAULT 'active'", 'cover_thumb TEXT',
- 'categories TEXT DEFAULT \'[]\'', 'media TEXT DEFAULT \'[]\''].forEach(col => {
+ 'categories TEXT DEFAULT \'[]\'', 'media TEXT DEFAULT \'[]\'',
+ 'torax TEXT', 'terno TEXT', 'camisa TEXT', 'manequim TEXT'].forEach(col => {
   try { db.exec(`ALTER TABLE models ADD COLUMN ${col}`); } catch {}
 });
 
-// home_items table
 db.exec(`
   CREATE TABLE IF NOT EXISTS home_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -96,7 +83,6 @@ db.exec(`
   )
 `);
 
-// instagram_posts table
 db.exec(`
   CREATE TABLE IF NOT EXISTS instagram_posts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -109,7 +95,6 @@ db.exec(`
   )
 `);
 
-// Data migrations (idempotent)
 db.prepare(`
   UPDATE models
   SET categories = json_array(category)
