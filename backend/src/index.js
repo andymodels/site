@@ -7,14 +7,22 @@ const cors    = require('cors');
 const path    = require('path');
 const fs      = require('fs');
 
-// Garantir que diretórios de dados existem
-[config.uploadsDir, path.join(config.uploadsDir, 'models')].forEach(dir => {
+// Garantir que diretórios de uploads existem — com fallback se sem permissão
+function safeUploadsDir(preferred) {
+  const fallback = path.join(__dirname, '../../uploads');
+  const dirs = [preferred, path.join(preferred, 'models')];
   try {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    dirs.forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
+    return preferred;
   } catch (e) {
-    console.warn(`[startup] Aviso: não foi possível criar ${dir}: ${e.message}`);
+    console.warn(`[startup] Sem permissão em ${preferred}, usando fallback: ${fallback}`);
+    [fallback, path.join(fallback, 'models')].forEach(d => {
+      try { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); } catch (_) {}
+    });
+    return fallback;
   }
-});
+}
+const uploadsDir = safeUploadsDir(config.uploadsDir);
 
 const app = express();
 
@@ -25,7 +33,7 @@ const allowedOrigins = process.env.FRONTEND_URL
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 
-app.use('/uploads', express.static(config.uploadsDir));
+app.use('/uploads', express.static(uploadsDir));
 
 app.use('/api/admin/auth',   require('./routes/adminAuth'));
 app.use('/api/admin/models', require('./routes/adminModels'));

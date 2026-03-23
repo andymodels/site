@@ -2,16 +2,25 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../../data/andy_models.db');
-const DATA_DIR = path.dirname(DB_PATH);
+const FALLBACK_PATH = path.join(__dirname, '../../data/andy_models.db');
 
-try {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-} catch (e) {
-  console.warn('[db] Aviso: não criou diretório do banco:', e.message);
+function resolveDbPath() {
+  const requested = process.env.DB_PATH;
+  if (!requested) return FALLBACK_PATH;
+  const dir = path.dirname(requested);
+  try {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    return requested;
+  } catch (e) {
+    console.warn(`[db] Sem permissão em ${dir}, usando fallback: ${FALLBACK_PATH}`);
+    try { fs.mkdirSync(path.dirname(FALLBACK_PATH), { recursive: true }); } catch (_) {}
+    return FALLBACK_PATH;
+  }
 }
 
+const DB_PATH = resolveDbPath();
 const db = new Database(DB_PATH);
+console.log('[db] Banco de dados:', DB_PATH);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS models (
