@@ -2,14 +2,28 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-const DB_PATH = (function () {
-  const p = path.join(__dirname, '../../data/andy_models.db');
-  try { fs.mkdirSync(path.dirname(p), { recursive: true }); } catch (_) {}
-  return p;
-})();
+function resolveDbPath() {
+  const candidates = [
+    process.env.DB_PATH,
+    path.join(__dirname, '../../data/andy_models.db'),
+    '/tmp/andy_models.db',
+  ].filter(Boolean);
 
+  for (const p of candidates) {
+    try {
+      fs.mkdirSync(path.dirname(p), { recursive: true });
+      fs.accessSync(path.dirname(p), fs.constants.W_OK);
+      console.log('[db] Usando banco:', p);
+      return p;
+    } catch (e) {
+      console.warn('[db] Ignorando path', p, '-', e.message);
+    }
+  }
+  throw new Error('[db] Nenhum path de banco disponível');
+}
+
+const DB_PATH = resolveDbPath();
 const db = new Database(DB_PATH);
-console.log('[db] Banco de dados:', DB_PATH);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS models (
