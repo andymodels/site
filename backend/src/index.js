@@ -8,7 +8,9 @@ const path    = require('path');
 const fs      = require('fs');
 
 // Garantir que diretórios de dados existem (crítico no Render com disco persistente)
-[config.uploadsDir, path.join(config.uploadsDir, 'models')].forEach(dir => {
+const uploadsBase = process.env.RENDER ? './uploads' : config.uploadsDir;
+
+[uploadsBase, path.join(uploadsBase, 'models')].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
@@ -21,7 +23,7 @@ const allowedOrigins = process.env.FRONTEND_URL
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 
-app.use('/uploads', express.static(config.uploadsDir));
+app.use('/uploads', express.static(uploadsBase));
 
 app.use('/api/admin/auth',   require('./routes/adminAuth'));
 app.use('/api/admin/models', require('./routes/adminModels'));
