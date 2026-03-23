@@ -4,7 +4,7 @@ services:
     runtime: node
     region: oregon
     plan: starter
-    buildCommand: npm install --prefix frontend && npm run build --prefix frontend && npm install --prefix backend
+    buildCommand: cd frontend && npm install && npm run build && cd .. && cd backend && npm install
     startCommand: node backend/src/index.js
     envVars:
       - key: NODE_ENV
@@ -16,8 +16,6 @@ services:
       - key: ADMIN_PASSWORD
         sync: false
       - key: ADMIN_SECRET
-        sync: false
-      - key: FRONTEND_URL
         sync: false
       - key: GOOGLE_CLIENT_EMAIL
         sync: false

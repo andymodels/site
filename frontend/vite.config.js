@@ -5,6 +5,9 @@ const BACKEND = `http://localhost:${process.env.BACKEND_PORT || 3001}`;
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    outDir: 'dist',
+  },
   server: {
     port: parseInt(process.env.VITE_PORT) || 3000,
     proxy: {
