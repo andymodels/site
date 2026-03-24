@@ -43,7 +43,6 @@ app.use('/api/models',       require('./routes/publicModels'));
 app.use('/api/models',       require('./routes/compositeRoute'));
 app.use('/api/home',         require('./routes/homeContent'));
 app.use('/api/instagram',         require('./routes/instagram'));
-app.use('/api/admin/instagram',   require('./routes/instagram'));
 app.use('/api/applications', require('./routes/applications'));
 app.use('/api/contact',      require('./routes/contact'));
 app.use('/api/settings',     require('./routes/settings'));

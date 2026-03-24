@@ -1,12 +1,11 @@
 /**
  * Instagram via embed client-side — sem token, sem API
  * Backend apenas armazena URLs dos posts no banco.
- * Frontend renderiza com o script oficial do Instagram.
  */
-const router = require('express').Router();
-const db     = require('../db');
+const router   = require('express').Router();
+const db       = require('../db');
+const adminAuth = require('../middleware/auth');
 
-// Garantir tabela de posts do Instagram
 db.exec(`
   CREATE TABLE IF NOT EXISTS instagram_embeds (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -17,21 +16,20 @@ db.exec(`
   )
 `);
 
-// GET /api/instagram — retorna lista de URLs para embed
+// GET /api/instagram  — público, retorna posts para embed
 router.get('/', (req, res) => {
   const posts = db.prepare(
-    'SELECT id, url, position FROM instagram_embeds WHERE active = 1 ORDER BY position ASC, id DESC LIMIT 12'
+    'SELECT id, url, position FROM instagram_embeds WHERE active=1 ORDER BY position ASC, id DESC LIMIT 12'
   ).all();
   res.json(posts);
 });
 
-// POST /api/admin/instagram — adicionar post (admin)
-router.post('/admin', (req, res) => {
-  const { url } = req.body;
+// POST /api/instagram  — admin, adicionar post
+router.post('/', adminAuth, (req, res) => {
+  const { url } = req.body || {};
   if (!url || !url.includes('instagram.com')) {
-    return res.status(400).json({ error: 'URL inválida. Cole o link de um post do Instagram.' });
+    return res.status(400).json({ error: 'URL inválida.' });
   }
-  // normalizar URL (remover query strings)
   const clean = url.split('?')[0].replace(/\/$/, '') + '/';
   try {
     const row = db.prepare(
@@ -44,16 +42,16 @@ router.post('/admin', (req, res) => {
   }
 });
 
-// DELETE /api/admin/instagram/:id — remover post (admin)
-router.delete('/admin/:id', (req, res) => {
-  db.prepare('DELETE FROM instagram_embeds WHERE id = ?').run(req.params.id);
+// DELETE /api/instagram/:id  — admin
+router.delete('/:id', adminAuth, (req, res) => {
+  db.prepare('DELETE FROM instagram_embeds WHERE id=?').run(req.params.id);
   res.json({ ok: true });
 });
 
-// PATCH /api/admin/instagram/:id — reordenar (admin)
-router.patch('/admin/:id', (req, res) => {
-  const { position } = req.body;
-  db.prepare('UPDATE instagram_embeds SET position = ? WHERE id = ?').run(position, req.params.id);
+// PATCH /api/instagram/:id  — admin, reordenar
+router.patch('/:id', adminAuth, (req, res) => {
+  const { position } = req.body || {};
+  db.prepare('UPDATE instagram_embeds SET position=? WHERE id=?').run(position, req.params.id);
   res.json({ ok: true });
 });
 

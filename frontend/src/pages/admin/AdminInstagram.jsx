@@ -13,7 +13,7 @@ export default function AdminInstagram() {
   const [saving, setSaving] = useState(false);
 
   async function load() {
-    const r = await fetch(`${API}/instagram`);
+    const r = await fetch(`${API}/instagram`, { headers: authH() });
     const d = await r.json();
     setPosts(Array.isArray(d) ? d : []);
   }
@@ -30,7 +30,7 @@ export default function AdminInstagram() {
     }
     setSaving(true);
     try {
-      const r = await fetch(`${API}/admin/instagram`, {
+      const r = await fetch(`${API}/instagram`, {
         method: 'POST',
         headers: authH(),
         body: JSON.stringify({ url: trimmed }),
@@ -47,7 +47,7 @@ export default function AdminInstagram() {
 
   async function remove(id) {
     if (!confirm('Remover este post?')) return;
-    await fetch(`${API}/admin/instagram/${id}`, { method: 'DELETE', headers: authH() });
+    await fetch(`${API}/instagram/${id}`, { method: 'DELETE', headers: authH() });
     await load();
   }
 
@@ -56,12 +56,12 @@ export default function AdminInstagram() {
     const swap = direction === 'up' ? idx - 1 : idx + 1;
     if (swap < 0 || swap >= posts.length) return;
     const newPos = posts[swap].position;
-    await fetch(`${API}/admin/instagram/${id}`, {
+    await fetch(`${API}/instagram/${id}`, {
       method: 'PATCH',
       headers: authH(),
       body: JSON.stringify({ position: newPos }),
     });
-    await fetch(`${API}/admin/instagram/${posts[swap].id}`, {
+    await fetch(`${API}/instagram/${posts[swap].id}`, {
       method: 'PATCH',
       headers: authH(),
       body: JSON.stringify({ position: posts[idx].position }),
