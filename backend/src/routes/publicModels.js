@@ -1,9 +1,11 @@
 const router = require('express').Router();
 const db = require('../db');
 
+const PUBLIC_FIELDS = 'id, name, slug, category, categories, age, height, bust, waist, hips, shoes, eyes, hair, city, bio, featured, active, cover_image, cover_thumb, images, media, model_status, torax, terno, camisa, manequim, instagram, tiktok, youtube';
+
 router.get('/', (req, res) => {
   const { category, featured, limit } = req.query;
-  let query = 'SELECT * FROM models WHERE active = 1';
+  let query = `SELECT ${PUBLIC_FIELDS} FROM models WHERE active = 1`;
   const params = [];
 
   if (category) {
@@ -24,7 +26,7 @@ router.get('/', (req, res) => {
 });
 
 router.get('/:slug', (req, res) => {
-  const row = db.prepare('SELECT * FROM models WHERE slug = ? AND active = 1').get(req.params.slug);
+  const row = db.prepare(`SELECT ${PUBLIC_FIELDS} FROM models WHERE slug = ? AND active = 1`).get(req.params.slug);
   if (!row) return res.status(404).json({ error: 'Not found' });
   res.json({
     ...row,

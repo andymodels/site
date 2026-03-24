@@ -68,7 +68,7 @@ async function main() {
     const r = await req('PUT', `${PROD}/api/admin/models/${prod.id}`, {
       ...prod,
       category:   local.category,
-      categories: localCats,
+      categories: JSON.stringify(localCats),
     });
     if (r.status === 200) { fixed++; } else { console.log(`    ERRO ${r.status}:`, JSON.stringify(r.body).substring(0, 80)); }
     await sleep(150);

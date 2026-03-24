@@ -85,4 +85,7 @@ app.listen(config.port, () => {
     console.log(`[driveSync] Sincronização automática (a cada ${intervalMs / 60000}min)...`);
     runSync().catch(e => console.error('[driveSync]', e.message));
   }, intervalMs);
+
+  const { startCleanupScheduler } = require('./services/cleanup');
+  startCleanupScheduler();
 });

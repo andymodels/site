@@ -72,6 +72,10 @@ export default function AdminDashboard() {
             className="text-xs tracking-widest uppercase text-gray-500 hover:text-black transition-colors">
             Rádio
           </Link>
+          <Link to="/admin/applications"
+            className="text-xs tracking-widest uppercase text-gray-500 hover:text-black transition-colors">
+            Inscrições
+          </Link>
           <Link to="/admin/models/new"
             className="text-xs tracking-widest uppercase bg-black text-white px-5 py-2.5 hover:bg-gray-800 transition-colors">
             + Novo Modelo

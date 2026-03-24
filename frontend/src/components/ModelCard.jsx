@@ -22,6 +22,9 @@ export default function ModelCard({ model }) {
             <span className="font-normal text-gray-400"> · {model.city}</span>
           )}
         </p>
+        {model.model_status && (
+          <p className="text-[9px] tracking-[0.15em] uppercase text-gray-400 mt-0.5">{model.model_status}</p>
+        )}
       </div>
     </Link>
   );

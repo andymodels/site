@@ -14,6 +14,15 @@ const EMPTY = {
   name: '', age: '', height: '', bust: '', waist: '',
   hips: '', shoes: '', eyes: '', hair: '', city: '', bio: '',
   featured: false, active: true,
+  torax: '', terno: '', camisa: '', manequim: '',
+  model_status: 'In Town',
+  phone: '', phone2: '', email: '', whatsapp: '',
+  cpf: '', rg: '', passport: '', passport_expiry: '', visa_type: '', visa_expiry: '', nationality: '',
+  address: '', address_city: '', address_state: '', address_country: '', address_zip: '',
+  bank_name: '', bank_agency: '', bank_account: '', bank_account_type: '', bank_pix: '',
+  instagram: '', tiktok: '', youtube: '', facebook: '', twitter: '',
+  emergency_name: '', emergency_phone: '', emergency_relation: '',
+  agent_notes: '', contract_start: '', contract_end: '',
 };
 
 // ── Draggable Media Grid ─────────────────────────────────────────────────────
@@ -128,6 +137,24 @@ export default function ModelForm() {
           shoes: model.shoes || '', eyes: model.eyes || '', hair: model.hair || '',
           city: model.city || '', bio: model.bio || '',
           featured: Boolean(model.featured), active: model.active !== 0,
+          torax: model.torax || '', terno: model.terno || '', camisa: model.camisa || '', manequim: model.manequim || '',
+          model_status: model.model_status || 'In Town',
+          phone: model.phone || '', phone2: model.phone2 || '', email: model.email || '', whatsapp: model.whatsapp || '',
+          cpf: model.cpf || '', rg: model.rg || '', passport: model.passport || '',
+          passport_expiry: model.passport_expiry || '', visa_type: model.visa_type || '',
+          visa_expiry: model.visa_expiry || '', nationality: model.nationality || '',
+          address: model.address || '', address_city: model.address_city || '',
+          address_state: model.address_state || '', address_country: model.address_country || '',
+          address_zip: model.address_zip || '',
+          bank_name: model.bank_name || '', bank_agency: model.bank_agency || '',
+          bank_account: model.bank_account || '', bank_account_type: model.bank_account_type || '',
+          bank_pix: model.bank_pix || '',
+          instagram: model.instagram || '', tiktok: model.tiktok || '',
+          youtube: model.youtube || '', facebook: model.facebook || '', twitter: model.twitter || '',
+          emergency_name: model.emergency_name || '', emergency_phone: model.emergency_phone || '',
+          emergency_relation: model.emergency_relation || '',
+          agent_notes: model.agent_notes || '', contract_start: model.contract_start || '',
+          contract_end: model.contract_end || '',
         });
         setCategories(model.categories?.length ? model.categories : [model.category || 'women']);
         setMediaItems(model.media || []);
@@ -354,9 +381,102 @@ export default function ModelForm() {
         <section>
           <p className={secHdr}>Medidas</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
-            {[['height','Altura'],['bust','Busto'],['waist','Cintura'],['hips','Quadril'],['shoes','Calçado'],['eyes','Olhos'],['hair','Cabelo']].map(([k,l]) => (
+            {[['height','Altura'],['bust','Busto/Tórax'],['waist','Cintura'],['hips','Quadril'],['shoes','Calçado'],['eyes','Olhos'],['hair','Cabelo'],['torax','Tórax (Masc.)'],['terno','Terno'],['camisa','Camisa'],['manequim','Manequim']].map(([k,l]) => (
               <div key={k}><label className={lbl}>{l}</label><input type="text" className={input} {...field(k)} /></div>
             ))}
+          </div>
+        </section>
+
+        {/* Status / Localização */}
+        <section>
+          <p className={secHdr}>Status / Localização Pública</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className={lbl}>Status do Modelo</label>
+              <select className={input} value={form.model_status} onChange={e => setForm(p => ({ ...p, model_status: e.target.value }))}>
+                <option value="In Town">In Town</option>
+                <option value="Introducing">Introducing</option>
+                <option value="Brasil">Brasil</option>
+                <option value="Milan">Milan</option>
+                <option value="Paris">Paris</option>
+                <option value="New York">New York</option>
+                <option value="London">London</option>
+                <option value="Tokyo">Tokyo</option>
+                <option value="Colombia">Colombia</option>
+                <option value="Argentina">Argentina</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        {/* Contato */}
+        <section>
+          <p className={secHdr}>Contato</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {[['phone','Telefone Principal'],['phone2','Telefone 2'],['email','E-mail'],['whatsapp','WhatsApp']].map(([k,l]) => (
+              <div key={k}><label className={lbl}>{l}</label><input type="text" className={input} {...field(k)} /></div>
+            ))}
+          </div>
+        </section>
+
+        {/* Redes Sociais */}
+        <section>
+          <p className={secHdr}>Redes Sociais</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {[['instagram','Instagram'],['tiktok','TikTok'],['youtube','YouTube'],['facebook','Facebook'],['twitter','X (Twitter)']].map(([k,l]) => (
+              <div key={k}><label className={lbl}>{l}</label><input type="text" className={input} placeholder="@usuario ou URL" {...field(k)} /></div>
+            ))}
+          </div>
+        </section>
+
+        {/* Documentos */}
+        <section>
+          <p className={secHdr}>Documentos</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {[['cpf','CPF'],['rg','RG'],['passport','Passaporte'],['passport_expiry','Validade Passaporte'],['visa_type','Tipo de Visto'],['visa_expiry','Validade do Visto'],['nationality','Nacionalidade']].map(([k,l]) => (
+              <div key={k}><label className={lbl}>{l}</label><input type="text" className={input} {...field(k)} /></div>
+            ))}
+          </div>
+        </section>
+
+        {/* Endereço */}
+        <section>
+          <p className={secHdr}>Endereço</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="sm:col-span-2"><label className={lbl}>Rua / Número</label><input type="text" className={input} {...field('address')} /></div>
+            {[['address_city','Cidade'],['address_state','Estado'],['address_country','País'],['address_zip','CEP / ZIP']].map(([k,l]) => (
+              <div key={k}><label className={lbl}>{l}</label><input type="text" className={input} {...field(k)} /></div>
+            ))}
+          </div>
+        </section>
+
+        {/* Dados Bancários */}
+        <section>
+          <p className={secHdr}>Dados Bancários</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {[['bank_name','Banco'],['bank_agency','Agência'],['bank_account','Conta'],['bank_account_type','Tipo de Conta'],['bank_pix','Chave PIX']].map(([k,l]) => (
+              <div key={k}><label className={lbl}>{l}</label><input type="text" className={input} {...field(k)} /></div>
+            ))}
+          </div>
+        </section>
+
+        {/* Contato de Emergência */}
+        <section>
+          <p className={secHdr}>Contato de Emergência</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {[['emergency_name','Nome'],['emergency_phone','Telefone'],['emergency_relation','Parentesco']].map(([k,l]) => (
+              <div key={k}><label className={lbl}>{l}</label><input type="text" className={input} {...field(k)} /></div>
+            ))}
+          </div>
+        </section>
+
+        {/* Informações Internas */}
+        <section>
+          <p className={secHdr}>Informações Internas</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div><label className={lbl}>Início do Contrato</label><input type="date" className={input} {...field('contract_start')} /></div>
+            <div><label className={lbl}>Fim do Contrato</label><input type="date" className={input} {...field('contract_end')} /></div>
+            <div className="sm:col-span-2"><label className={lbl}>Notas do Agente</label><textarea className={input + ' resize-none'} rows={3} {...field('agent_notes')} /></div>
           </div>
         </section>
 

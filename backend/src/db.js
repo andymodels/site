@@ -66,7 +66,7 @@ db.exec(`
   )
 `);
 
-['state TEXT', 'instagram TEXT', 'photos TEXT DEFAULT \'[]\''].forEach(col => {
+['state TEXT', 'instagram TEXT', 'photos TEXT DEFAULT \'[]\'', 'status TEXT DEFAULT \'pending\'', 'notes TEXT'].forEach(col => {
   try { db.exec(`ALTER TABLE applications ADD COLUMN ${col}`); } catch {}
 });
 
@@ -79,7 +79,33 @@ db.exec(`
 
 ['drive_folder_id TEXT', 'drive_synced_at TEXT', "sync_status TEXT DEFAULT 'active'", 'cover_thumb TEXT',
  'categories TEXT DEFAULT \'[]\'', 'media TEXT DEFAULT \'[]\'',
- 'torax TEXT', 'terno TEXT', 'camisa TEXT', 'manequim TEXT'].forEach(col => {
+ 'torax TEXT', 'terno TEXT', 'camisa TEXT', 'manequim TEXT',
+
+ // Status público (IN TOWN / INTRODUCING / país)
+ "model_status TEXT DEFAULT 'In Town'",
+
+ // Contato interno
+ 'phone TEXT', 'phone2 TEXT', 'email TEXT', 'whatsapp TEXT',
+
+ // Documentos
+ 'cpf TEXT', 'rg TEXT', 'passport TEXT', 'passport_expiry TEXT',
+ 'visa_type TEXT', 'visa_expiry TEXT', 'nationality TEXT',
+
+ // Endereço
+ 'address TEXT', 'address_city TEXT', 'address_state TEXT', 'address_country TEXT', 'address_zip TEXT',
+
+ // Dados bancários
+ 'bank_name TEXT', 'bank_agency TEXT', 'bank_account TEXT', 'bank_account_type TEXT', 'bank_pix TEXT',
+
+ // Redes sociais
+ 'instagram TEXT', 'tiktok TEXT', 'youtube TEXT', 'facebook TEXT', 'twitter TEXT',
+
+ // Contato de emergência
+ 'emergency_name TEXT', 'emergency_phone TEXT', 'emergency_relation TEXT',
+
+ // Interno
+ 'agent_notes TEXT', 'contract_start TEXT', 'contract_end TEXT',
+].forEach(col => {
   try { db.exec(`ALTER TABLE models ADD COLUMN ${col}`); } catch {}
 });
 
