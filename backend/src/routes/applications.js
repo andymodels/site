@@ -145,9 +145,9 @@ router.post('/', upload.fields([{ name: 'photos', maxCount: 5 }, { name: 'pdf', 
   const badPhoto = photoFiles.find(f => !['image/jpeg', 'image/png'].includes(f.mimetype));
   if (badPhoto) return res.status(400).json({ error: 'Apenas JPG e PNG são aceitos para fotos.' });
 
-  // Validar tamanho individual das imagens (5MB)
-  const oversized = photoFiles.find(f => f.size > 5 * 1024 * 1024);
-  if (oversized) return res.status(400).json({ error: 'Cada foto deve ter no máximo 5MB.' });
+  // Validar tamanho individual das imagens (10MB)
+  const oversized = photoFiles.find(f => f.size > 10 * 1024 * 1024);
+  if (oversized) return res.status(400).json({ error: 'Cada foto deve ter no máximo 10MB.' });
 
   // 1. Gerar thumbnail da primeira foto (referência visual permanente)
   const now = Date.now();

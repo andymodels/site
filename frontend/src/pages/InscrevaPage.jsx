@@ -3,14 +3,14 @@ import { useLanguage } from '../context/LanguageContext';
 
 const MAX_PHOTOS    = 5;
 const MIN_PHOTOS    = 3;
-const MAX_SIZE_MB   = 5;
+const MAX_SIZE_MB   = 10;
 const MAX_PDF_MB    = 10;
 const ALLOWED_IMAGE = ['image/jpeg', 'image/png'];
 const ALLOWED_TYPES = [...ALLOWED_IMAGE, 'application/pdf'];
 
 const EMPTY = {
   name: '', email: '', phone: '', age: '',
-  height: '', city: '', state: '', instagram: '',
+  height: '', city: '', state: '', instagram: 'https://instagram.com/',
   website: '',
 };
 
@@ -50,6 +50,27 @@ export default function InscrevaPage() {
   const [formError, setFormError] = useState('');
   const fileRef = useRef();
   const pdfRef = useRef();
+
+  function handleInstagram(e) {
+    const raw = e.target.value;
+    const prefix = 'https://instagram.com/';
+
+    // Se apagou tudo ou ficou menor que o prefixo, restaura o prefixo
+    if (!raw.startsWith(prefix)) {
+      // Tenta extrair o username de qualquer entrada (ex: colar link completo ou digitar @usuario)
+      let username = raw
+        .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
+        .replace(/^@/, '')
+        .replace(/\/$/, '')
+        .trim();
+      setForm(p => ({ ...p, instagram: prefix + username }));
+      return;
+    }
+
+    // Remove @ se digitado após o prefixo
+    let afterPrefix = raw.slice(prefix.length).replace(/^@/, '');
+    setForm(p => ({ ...p, instagram: prefix + afterPrefix }));
+  }
 
   function field(key) {
     return { value: form[key], onChange: e => setForm(p => ({ ...p, [key]: e.target.value })) };
@@ -112,18 +133,26 @@ export default function InscrevaPage() {
       return;
     }
 
-    // Validar URL do Instagram se preenchido
+    // Validar Instagram: se preenchido, deve ter username após o prefixo
     const ig = form.instagram.trim();
-    if (ig && !ig.match(/^https?:\/\/(www\.)?instagram\.com\/.+/i)) {
-      setFormError('Instagram: informe a URL completa. Ex: https://instagram.com/seu.perfil');
+    const igUsername = ig.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '').trim();
+    if (ig && ig !== 'https://instagram.com/' && igUsername.length === 0) {
+      setFormError('Instagram: informe seu nome de usuário.');
       return;
     }
 
     setLoading(true);
     try {
       const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => { if (k !== 'website' && v) fd.append(k, v); });
-      fd.append('website', form.website);
+      Object.entries(form).forEach(([k, v]) => {
+        if (k === 'website') { fd.append(k, v); return; }
+        if (k === 'instagram') {
+          const val = v.trim();
+          if (val && val !== 'https://instagram.com/') fd.append(k, val);
+          return;
+        }
+        if (v) fd.append(k, v);
+      });
       photos.forEach(p => fd.append('photos', p.file));
       if (pdfFile) fd.append('pdf', pdfFile);
       const res = await fetch('/api/applications', { method: 'POST', body: fd });
@@ -247,8 +276,8 @@ export default function InscrevaPage() {
                   <input type="tel" required className={inputClass} placeholder={T.fields.whatsappPh} {...field('phone')} />
                 </div>
                 <div>
-                  <label className={labelClass}>{T.fields.instagram}</label>
-                  <input type="url" className={inputClass} placeholder={T.fields.instagramPh} {...field('instagram')} />
+                  <label className={labelClass}>Instagram (informe apenas seu usuário)</label>
+                  <input type="text" className={inputClass} placeholder="https://instagram.com/seu.usuario" value={form.instagram} onChange={handleInstagram} />
                 </div>
                 <div className="sm:col-span-2">
                   <label className={labelClass}>{T.fields.email}</label>
