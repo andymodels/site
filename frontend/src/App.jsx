@@ -27,7 +27,6 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/women" element={<CategoryPage category="women" />} />
           <Route path="/men" element={<CategoryPage category="men" />} />
-          <Route path="/new-faces" element={<CategoryPage category="new-faces" />} />
           <Route path="/creators" element={<CategoryPage category="creators" />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/inscreva-se" element={<InscrevaPage />} />
