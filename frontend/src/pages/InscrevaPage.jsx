@@ -1,8 +1,12 @@
 import { useState, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 
-const MAX_PHOTOS = 5;
-const MAX_SIZE_MB = 5;
+const MAX_PHOTOS    = 5;
+const MIN_PHOTOS    = 3;
+const MAX_SIZE_MB   = 5;
+const MAX_PDF_MB    = 10;
+const ALLOWED_IMAGE = ['image/jpeg', 'image/png'];
+const ALLOWED_TYPES = [...ALLOWED_IMAGE, 'application/pdf'];
 
 const EMPTY = {
   name: '', email: '', phone: '', age: '',
@@ -37,11 +41,14 @@ export default function InscrevaPage() {
 
   const [form, setForm] = useState(EMPTY);
   const [photos, setPhotos] = useState([]);
+  const [pdfFile, setPdfFile] = useState(null);
   const [photoError, setPhotoError] = useState('');
+  const [pdfError, setPdfError] = useState('');
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState('');
   const fileRef = useRef();
+  const pdfRef = useRef();
 
   function field(key) {
     return { value: form[key], onChange: e => setForm(p => ({ ...p, [key]: e.target.value })) };
@@ -50,6 +57,13 @@ export default function InscrevaPage() {
   function handleFiles(e) {
     const selected = Array.from(e.target.files);
     setPhotoError('');
+
+    const invalid = selected.filter(f => !ALLOWED_IMAGE.includes(f.type));
+    if (invalid.length) {
+      setPhotoError('Apenas imagens JPG e PNG são permitidas para fotos.');
+      e.target.value = '';
+      return;
+    }
     if (photos.length + selected.length > MAX_PHOTOS) {
       setPhotoError(`Máximo de ${MAX_PHOTOS} fotos. Você já tem ${photos.length} selecionada(s).`);
       e.target.value = '';
@@ -65,6 +79,24 @@ export default function InscrevaPage() {
     e.target.value = '';
   }
 
+  function handlePdf(e) {
+    const file = e.target.files[0];
+    setPdfError('');
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      setPdfError('Apenas arquivos PDF são aceitos neste campo.');
+      e.target.value = '';
+      return;
+    }
+    if (file.size > MAX_PDF_MB * 1024 * 1024) {
+      setPdfError(`O PDF deve ter no máximo ${MAX_PDF_MB}MB.`);
+      e.target.value = '';
+      return;
+    }
+    setPdfFile(file);
+    e.target.value = '';
+  }
+
   function removePhoto(i) {
     setPhotos(prev => { URL.revokeObjectURL(prev[i].preview); return prev.filter((_, idx) => idx !== i); });
     setPhotoError('');
@@ -73,11 +105,16 @@ export default function InscrevaPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setFormError('');
+    if (photos.length < MIN_PHOTOS) {
+      setPhotoError(`Envie pelo menos ${MIN_PHOTOS} fotos para continuar.`);
+      return;
+    }
     setLoading(true);
     try {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => { if (v) fd.append(k, v); });
       photos.forEach(p => fd.append('photos', p.file));
+      if (pdfFile) fd.append('pdf', pdfFile);
       const res = await fetch('/api/applications', { method: 'POST', body: fd });
       if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || 'Erro ao enviar.'); }
       setStatus('success');
@@ -216,8 +253,8 @@ export default function InscrevaPage() {
               <div className="border-t border-gray-200 pt-6">
                 <div className="flex items-baseline justify-between mb-3">
                   <label className={labelClass}>{T.fields.photos}</label>
-                  <span className={`text-[10px] tracking-wider tabular-nums ${photos.length >= MAX_PHOTOS ? 'text-black font-semibold' : 'text-gray-400'}`}>
-                    {photos.length}/{MAX_PHOTOS}
+                  <span className={`text-[10px] tracking-wider tabular-nums ${photos.length >= MAX_PHOTOS ? 'text-black font-semibold' : photos.length >= MIN_PHOTOS ? 'text-green-600' : 'text-gray-400'}`}>
+                    {photos.length}/{MAX_PHOTOS} {photos.length < MIN_PHOTOS ? `(mín. ${MIN_PHOTOS})` : ''}
                   </span>
                 </div>
 
@@ -262,6 +299,38 @@ export default function InscrevaPage() {
 
                 {photoError && (
                   <p className="text-sm text-red-500 mt-3 font-light">{photoError}</p>
+                )}
+              </div>
+
+              {/* ── PDF opcional ─────────────────────────────────────────── */}
+              <div className="border-t border-gray-200 pt-6">
+                <div className="flex items-baseline justify-between mb-3">
+                  <label className={labelClass}>Material complementar (PDF — opcional)</label>
+                  {pdfFile && (
+                    <button type="button" onClick={() => setPdfFile(null)} className="text-[10px] text-gray-400 hover:text-black tracking-wider uppercase">remover</button>
+                  )}
+                </div>
+                {pdfFile ? (
+                  <p className="text-[11px] text-gray-600 border border-gray-200 px-4 py-2.5 inline-flex items-center gap-2">
+                    <span>📄</span> {pdfFile.name}
+                  </p>
+                ) : (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => pdfRef.current?.click()}
+                      className="border border-gray-300 px-4 py-2.5 text-[11px] tracking-[0.14em] uppercase text-gray-600 hover:border-black hover:text-black transition-colors"
+                    >
+                      Adicionar PDF
+                    </button>
+                    <p className="text-[10px] text-gray-400 mt-2 tracking-wide">
+                      Somente PDF · Máximo {MAX_PDF_MB}MB
+                    </p>
+                  </div>
+                )}
+                <input type="file" ref={pdfRef} accept="application/pdf" onChange={handlePdf} className="hidden" />
+                {pdfError && (
+                  <p className="text-sm text-red-500 mt-3 font-light">{pdfError}</p>
                 )}
               </div>
 

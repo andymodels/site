@@ -12,12 +12,14 @@ const TEMP_DIR = path.join(config.uploadsDir, 'temp');
 fs.mkdirSync(TEMP_DIR, { recursive: true });
 
 // ── Multer — memória (processamos aqui antes de salvar) ────────────────────
+const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'application/pdf'];
+
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024, files: 5 },
+  limits: { fileSize: 10 * 1024 * 1024, files: 6 },
   fileFilter: (req, file, cb) => {
-    if (['image/jpeg', 'image/png'].includes(file.mimetype)) cb(null, true);
-    else cb(new Error('Apenas JPG e PNG são aceitos.'));
+    if (ALLOWED_MIMES.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Formato não permitido. Envie apenas JPG, PNG ou PDF.'));
   },
 });
 
@@ -33,7 +35,7 @@ function createMailer() {
   });
 }
 
-async function sendApplicationEmail(appData, photoFiles) {
+async function sendApplicationEmail(appData, photoFiles, pdfFile) {
   const mailer = createMailer();
   if (!mailer) {
     console.warn('[mail] SMTP não configurado — configure SMTP_HOST, SMTP_USER e SMTP_PASS');
@@ -49,6 +51,14 @@ async function sendApplicationEmail(appData, photoFiles) {
     content:  f.buffer,
     contentType: f.mimetype,
   }));
+
+  if (pdfFile) {
+    attachments.push({
+      filename: 'material.pdf',
+      content:  pdfFile.buffer,
+      contentType: 'application/pdf',
+    });
+  }
 
   await mailer.sendMail({
     from: `"Andy Models Site" <${process.env.SMTP_USER}>`,
@@ -92,22 +102,46 @@ async function sendApplicationEmail(appData, photoFiles) {
 }
 
 // ── POST /api/applications ─────────────────────────────────────────────────
-router.post('/', upload.array('photos', 5), async (req, res) => {
+router.post('/', upload.fields([{ name: 'photos', maxCount: 5 }, { name: 'pdf', maxCount: 1 }]), async (req, res) => {
   const { name, email, phone, age, height, city, state, instagram, category } = req.body;
 
   if (!name?.trim()) return res.status(400).json({ error: 'Nome é obrigatório.' });
   if (!email?.trim()) return res.status(400).json({ error: 'E-mail é obrigatório.' });
 
-  // 1. Salvar fotos em /uploads/temp com timestamp no nome
+  const photoFiles = req.files?.photos || [];
+  const pdfFiles   = req.files?.pdf || [];
+
+  if (photoFiles.length < 3) {
+    return res.status(400).json({ error: 'Envie pelo menos 3 fotos.' });
+  }
+
+  // Validar que fotos são apenas imagens
+  const badPhoto = photoFiles.find(f => !['image/jpeg', 'image/png'].includes(f.mimetype));
+  if (badPhoto) return res.status(400).json({ error: 'Apenas JPG e PNG são aceitos para fotos.' });
+
+  // Validar tamanho individual das imagens (5MB)
+  const oversized = photoFiles.find(f => f.size > 5 * 1024 * 1024);
+  if (oversized) return res.status(400).json({ error: 'Cada foto deve ter no máximo 5MB.' });
+
+  // 1. Salvar fotos em /uploads/temp
   const savedPhotos = [];
   const now = Date.now();
-  for (let i = 0; i < (req.files || []).length; i++) {
-    const f    = req.files[i];
+  for (let i = 0; i < photoFiles.length; i++) {
+    const f    = photoFiles[i];
     const ext  = f.mimetype === 'image/png' ? 'png' : 'jpg';
     const fname = `app_${now}_${i + 1}.${ext}`;
     const fpath = path.join(TEMP_DIR, fname);
     fs.writeFileSync(fpath, f.buffer);
     savedPhotos.push(`/uploads/temp/${fname}`);
+  }
+
+  // Salvar PDF se enviado
+  let savedPdf = null;
+  if (pdfFiles.length > 0) {
+    const pf    = pdfFiles[0];
+    const pfname = `app_${now}_material.pdf`;
+    fs.writeFileSync(path.join(TEMP_DIR, pfname), pf.buffer);
+    savedPdf = `/uploads/temp/${pfname}`;
   }
 
   // 2. Salvar dados no banco
@@ -127,7 +161,7 @@ router.post('/', upload.array('photos', 5), async (req, res) => {
   const appData = { name: name.trim(), email: email.trim(), phone, age, height, city, state, instagram, category };
   let mailResult;
   try {
-    mailResult = await sendApplicationEmail(appData, req.files);
+    mailResult = await sendApplicationEmail(appData, photoFiles, savedPdf ? pdfFiles[0] : null);
   } catch (e) {
     console.error('[mail] Erro ao enviar:', e.message);
     // Marcar no banco que e-mail falhou (não perdemos o cadastro)
