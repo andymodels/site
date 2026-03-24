@@ -2,8 +2,18 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 
 const RadioContext = createContext(null);
 
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 export function RadioProvider({ children }) {
   const [tracks, setTracks]     = useState([]);
+  const [queue, setQueue]       = useState([]);   // ordem embaralhada
   const [idx, setIdx]           = useState(0);
   const [playing, setPlaying]   = useState(false);
   const [progress, setProgress] = useState(0);
@@ -16,11 +26,14 @@ export function RadioProvider({ children }) {
     loadedRef.current = true;
     fetch('/api/radio')
       .then(r => r.ok ? r.json() : [])
-      .then(data => setTracks(data))
+      .then(data => {
+        setTracks(data);
+        setQueue(shuffle(data));
+      })
       .catch(() => {});
   }, []);
 
-  const track = tracks[idx];
+  const track = queue[idx];
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -29,14 +42,26 @@ export function RadioProvider({ children }) {
     audio.src = track.url;
     audio.load();
     if (wasPlaying) audio.play().catch(() => {});
-  }, [idx]);
+  }, [idx, queue]);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
     const onTime  = () => setProgress(audio.currentTime);
     const onLoad  = () => setDuration(audio.duration);
-    const onEnded = () => setIdx(i => (i + 1) % Math.max(tracks.length, 1));
+    const onEnded = () => {
+      setIdx(i => {
+        const next = i + 1;
+        if (next >= queue.length) {
+          // chegou ao fim — embaralha de novo e recomeça
+          setQueue(q => shuffle(q));
+          return 0;
+        }
+        return next;
+      });
+    };
+
     audio.addEventListener('timeupdate', onTime);
     audio.addEventListener('loadedmetadata', onLoad);
     audio.addEventListener('ended', onEnded);
@@ -45,7 +70,7 @@ export function RadioProvider({ children }) {
       audio.removeEventListener('loadedmetadata', onLoad);
       audio.removeEventListener('ended', onEnded);
     };
-  }, [tracks.length]);
+  }, [queue]);
 
   function togglePlay() {
     const audio = audioRef.current;
@@ -54,8 +79,8 @@ export function RadioProvider({ children }) {
     else { audio.play().then(() => setPlaying(true)).catch(() => {}); }
   }
 
-  function prev() { setIdx(i => (i - 1 + tracks.length) % tracks.length); }
-  function next() { setIdx(i => (i + 1) % tracks.length); }
+  function prev() { setIdx(i => (i - 1 + queue.length) % queue.length); }
+  function next() { setIdx(i => (i + 1) % queue.length); }
 
   function seek(e, el) {
     const audio = audioRef.current;
