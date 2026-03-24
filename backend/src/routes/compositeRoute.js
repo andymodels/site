@@ -33,7 +33,7 @@ function getMeasures(model) {
     ['manequim','Size'], ['shoes','Shoes'], ['hair','Hair'], ['eyes','Eyes'],
   ];
   const menFields = [
-    ['height','Height'], ['torax','Chest'], ['waist','Waist'],
+    ['height','Height'], ['torax','Chest'],
     ['terno','Suit'], ['camisa','Shirt'], ['manequim','Size'],
     ['shoes','Shoes'], ['hair','Hair'], ['eyes','Eyes'],
   ];

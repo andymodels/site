@@ -9,12 +9,14 @@ const MEASURES_WOMEN = [
   ['manequim','Size'], ['shoes','Shoes'], ['hair','Hair'], ['eyes','Eyes'],
 ];
 const MEASURES_MEN = [
-  ['height','Height'], ['torax','Chest'], ['waist','Waist'],
+  ['height','Height'], ['torax','Chest'],
   ['terno','Suit'], ['camisa','Shirt'], ['manequim','Size'],
   ['shoes','Shoes'], ['hair','Hair'], ['eyes','Eyes'],
 ];
 function getMeasures(model) {
-  const cats = (() => { try { return JSON.parse(model.categories || '[]'); } catch { return []; } })();
+  const cats = Array.isArray(model.categories)
+    ? model.categories
+    : (() => { try { return JSON.parse(model.categories || '[]'); } catch { return []; } })();
   const isMen = model.category === 'men' || cats.includes('men');
   return (isMen ? MEASURES_MEN : MEASURES_WOMEN).filter(([k]) => model[k] && String(model[k]).trim());
 }
