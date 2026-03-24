@@ -2,21 +2,25 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getModels } from '../api';
 import InstagramFeed from '../components/InstagramFeed';
+import MaintenancePage from './MaintenancePage';
 
 function SkeletonCard() {
   return <div className="bg-gray-100 animate-pulse" style={{ aspectRatio: '3/4' }} />;
 }
 
 export default function Home() {
-  const [models, setModels]   = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [models, setModels]       = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [offline, setOffline]     = useState(false);
 
   useEffect(() => {
     getModels({ featured: '1' })
-      .then(setModels)
-      .catch(() => setModels([]))
+      .then(data => { setModels(data); setOffline(false); })
+      .catch(() => setOffline(true))
       .finally(() => setLoading(false));
   }, []);
+
+  if (offline) return <MaintenancePage />;
 
   return (
     <main>
