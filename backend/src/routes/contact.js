@@ -37,14 +37,18 @@ router.post('/', async (req, res) => {
       to: ['msn@andymodels.com'],
       subject: 'Novo contato pelo site',
       html: `
-        <h2 style="font-family:sans-serif;color:#111;">Novo contato pelo site</h2>
-        <table style="font-family:sans-serif;font-size:14px;color:#333;">
-          <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Nome</td><td>${name.trim()}</td></tr>
-          <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Email</td><td><a href="mailto:${email.trim()}">${email.trim()}</a></td></tr>
-          ${phone ? `<tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Telefone</td><td>${phone.trim()}</td></tr>` : ''}
-          ${instagram ? `<tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Instagram</td><td>${instagram.trim()}</td></tr>` : ''}
-          <tr><td style="padding:4px 12px 4px 0;font-weight:bold;vertical-align:top;">Mensagem</td><td style="white-space:pre-wrap;">${message.trim()}</td></tr>
-        </table>
+        <div style="font-family: Arial; max-width: 600px;">
+          <h2>📩 Novo contato - Andy Models</h2>
+          <hr/>
+          <p><strong>Nome:</strong> ${name.trim()}</p>
+          <p><strong>Email:</strong> ${email.trim()}</p>
+          <p><strong>Telefone:</strong> ${phone?.trim() || '—'}</p>
+          <p><strong>Instagram:</strong> ${instagram?.trim() || '—'}</p>
+          <p><strong>Mensagem:</strong></p>
+          <p style="background:#f5f5f5;padding:10px;border-radius:6px;white-space:pre-wrap;">
+            ${message.trim()}
+          </p>
+        </div>
       `
     });
   } catch (err) {
