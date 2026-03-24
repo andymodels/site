@@ -17,6 +17,7 @@ import AdminSync from './pages/admin/AdminSync';
 
 import AdminRadioPage from './pages/admin/AdminRadioPage';
 import AdminApplications from './pages/admin/AdminApplications';
+import AdminInstagram from './pages/admin/AdminInstagram';
 
 export default function App() {
   return (
@@ -56,6 +57,10 @@ export default function App() {
           <Route
             path="/admin/applications"
             element={<ProtectedRoute><AdminApplications /></ProtectedRoute>}
+          />
+          <Route
+            path="/admin/instagram"
+            element={<ProtectedRoute><AdminInstagram /></ProtectedRoute>}
           />
 
           <Route path="/:slug" element={<ModelPage />} />

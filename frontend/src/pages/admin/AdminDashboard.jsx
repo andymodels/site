@@ -372,6 +372,10 @@ export default function AdminDashboard() {
             className="text-xs tracking-widest uppercase text-gray-500 hover:text-black transition-colors">
             Rádio
           </Link>
+          <Link to="/admin/instagram"
+            className="text-xs tracking-widest uppercase text-gray-500 hover:text-black transition-colors">
+            Instagram
+          </Link>
           <Link to="/admin/applications"
             className="text-xs tracking-widest uppercase text-gray-500 hover:text-black transition-colors">
             Inscrições
