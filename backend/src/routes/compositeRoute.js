@@ -16,7 +16,13 @@ function safeFilename(name) {
   return name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_-]/g, '');
 }
 
-const LOGO_PATH = path.join(config.uploadsDir, 'logo.png');
+// logo: tenta uploads/, depois frontend/public/, depois frontend/dist/
+const POSSIBLE_LOGOS = [
+  path.join(config.uploadsDir, 'logo.png'),
+  path.join(__dirname, '../../../frontend/dist/logo.png'),
+  path.join(__dirname, '../../../frontend/public/logo.png'),
+];
+const LOGO_PATH = POSSIBLE_LOGOS.find(p => fs.existsSync(p)) || null;
 
 function getMeasures(model) {
   const cats = (() => { try { return JSON.parse(model.categories || '[]'); } catch { return []; } })();
@@ -49,40 +55,47 @@ const PHOTO_W = (PAGE_W - MARGIN * 2 - GAP) / 2;
 function drawPageFrame(doc, model, pageNum, totalPages) {
   const W = PAGE_W;
   const H = PAGE_H;
-  const logoY = MARGIN + 8;
+  const logoY = MARGIN + 6;
+  const LOGO_H = 38;
+  const NAME_X = MARGIN + 200;
+  const NAME_W = W - NAME_X - MARGIN - 60; // espaço para contador à direita
 
-  // logo
-  if (fs.existsSync(LOGO_PATH)) {
-    doc.image(LOGO_PATH, MARGIN, logoY, { height: 32 });
+  // ── logo ──────────────────────────────────────────────────────────────────
+  if (LOGO_PATH) {
+    doc.image(LOGO_PATH, MARGIN, logoY, { height: LOGO_H });
   } else {
-    doc.fontSize(10).fillColor('#111').font('Helvetica-Bold')
-      .text('ANDY MODELS', MARGIN, logoY + 8, { width: 160 });
+    doc.fontSize(9).fillColor('#111').font('Helvetica-Bold')
+      .text('ANDY MODELS', MARGIN, logoY + 12, { width: 180, lineBreak: false });
   }
 
-  // model name — large, centered, dominant
-  doc.fontSize(32).fillColor('#111').font('Helvetica-Bold')
-    .text(model.name.toUpperCase(), MARGIN + 180, logoY, {
-      width: W - (MARGIN + 180) * 2,
+  // ── nome do modelo — destaque central ────────────────────────────────────
+  doc.fontSize(26).fillColor('#111').font('Helvetica-Bold')
+    .text(model.name.toUpperCase(), NAME_X, logoY + 6, {
+      width: NAME_W,
       align: 'center',
       lineBreak: false,
     });
 
-  // page counter — right
+  // ── contador — direita ────────────────────────────────────────────────────
   doc.fontSize(7).fillColor('#aaa').font('Helvetica')
-    .text(`${pageNum} / ${totalPages}`, W - MARGIN - 50, logoY + 14, { width: 50, align: 'right' });
+    .text(`${pageNum} / ${totalPages}`, W - MARGIN - 55, logoY + 16, {
+      width: 55,
+      align: 'right',
+      lineBreak: false,
+    });
 
-  // top divider
+  // ── divisor superior ──────────────────────────────────────────────────────
   doc.moveTo(MARGIN, MARGIN + HEADER_H)
     .lineTo(W - MARGIN, MARGIN + HEADER_H)
     .lineWidth(0.4).strokeColor('#ccc').stroke();
 
-  // footer
+  // ── rodapé: medidas + site ────────────────────────────────────────────────
   const footerY = H - MARGIN - FOOTER_H + 8;
   const measureStr = getMeasures(model);
   doc.fontSize(6.5).fillColor('#888').font('Helvetica')
-    .text(measureStr, MARGIN, footerY, { width: W - MARGIN * 2 - 90 });
+    .text(measureStr, MARGIN, footerY, { width: W - MARGIN * 2 - 90, lineBreak: false });
   doc.fontSize(6.5).fillColor('#bbb').font('Helvetica')
-    .text('andymodels.com', W - MARGIN - 90, footerY, { width: 90, align: 'right' });
+    .text('andymodels.com', W - MARGIN - 90, footerY, { width: 90, align: 'right', lineBreak: false });
 
   doc.moveTo(MARGIN, H - MARGIN - FOOTER_H)
     .lineTo(W - MARGIN, H - MARGIN - FOOTER_H)

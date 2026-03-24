@@ -301,6 +301,7 @@ export default function ModelForm() {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => {
         if (k === 'featured' || k === 'active') fd.append(k, v ? '1' : '0');
+        else if (k === 'bio') fd.append(k, v ?? ''); // sempre envia, mesmo vazia
         else if (v !== '') fd.append(k, v);
       });
       fd.append('categories', JSON.stringify(categories));
@@ -357,8 +358,7 @@ export default function ModelForm() {
           <p className={secHdr}>Informações</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="sm:col-span-2"><label className={lbl}>Nome *</label><input type="text" className={input} required {...field('name')} /></div>
-            <div><label className={lbl}>Cidade</label><input type="text" className={input} {...field('city')} /></div>
-            <div><label className={lbl}>Idade</label><input type="number" className={input} {...field('age')} /></div>
+            <div><label className={lbl}>Idade (interno)</label><input type="number" className={input} {...field('age')} /></div>
             <div className="sm:col-span-2"><label className={lbl}>Bio</label><textarea className={input + ' resize-none'} rows={3} {...field('bio')} /></div>
           </div>
         </section>
