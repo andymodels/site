@@ -58,8 +58,33 @@ router.post('/', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'g
     const categories = parseField(req.body.categories, ['women']);
     const category   = categories[0] || 'women';
 
-    let slug = slugify(name);
-    if (db.prepare('SELECT id FROM models WHERE slug = ?').get(slug)) slug = `${slug}-${Date.now()}`;
+    const slug = slugify(name);
+    const existing = db.prepare('SELECT id FROM models WHERE slug = ?').get(slug);
+    if (existing) {
+      // Modelo já existe — atualiza campos não-imagem recebidos em vez de criar duplicata
+      const b = req.body;
+      db.prepare(`UPDATE models SET
+        category=COALESCE(?,category), categories=COALESCE(?,categories),
+        age=COALESCE(?,age), height=COALESCE(?,height),
+        bust=COALESCE(?,bust), waist=COALESCE(?,waist), hips=COALESCE(?,hips),
+        shoes=COALESCE(?,shoes), eyes=COALESCE(?,eyes), hair=COALESCE(?,hair),
+        city=COALESCE(?,city), bio=COALESCE(?,bio),
+        torax=COALESCE(?,torax), terno=COALESCE(?,terno),
+        camisa=COALESCE(?,camisa), manequim=COALESCE(?,manequim),
+        model_status=COALESCE(?,model_status)
+        WHERE id=?`).run(
+        b.category||null, b.categories ? JSON.stringify(parseField(b.categories,null)) : null,
+        b.age||null, b.height||null,
+        b.bust||null, b.waist||null, b.hips||null,
+        b.shoes||null, b.eyes||null, b.hair||null,
+        b.city||null, b.bio||null,
+        b.torax||null, b.terno||null,
+        b.camisa||null, b.manequim||null,
+        b.model_status||null,
+        existing.id
+      );
+      return res.status(200).json(serializeModel(db.prepare('SELECT * FROM models WHERE id=?').get(existing.id)));
+    }
 
     clearModelImages(slug);
 
