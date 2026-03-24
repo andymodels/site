@@ -1,8 +1,8 @@
 const https = require('https');
 const http  = require('http');
 
-const API   = 'http://localhost:3001';
-const TOKEN = 'andy-secret-token-fase1';
+const API   = process.env.API_URL || 'http://localhost:3001';
+const TOKEN = process.env.ADMIN_TOKEN || 'andy-secret-token-fase1';
 
 // Slug mapping: some slugs differ between old site and our DB
 // Format: { dbSlug: 'site-slug' } — add overrides as needed
@@ -64,16 +64,21 @@ function get(url) {
 
 function post(url, body) {
   return new Promise((resolve, reject) => {
-    const data = JSON.stringify(body);
+    const data   = JSON.stringify(body);
+    const parsed = new URL(url);
+    const client = parsed.protocol === 'https:' ? https : http;
     const opts = {
-      method: 'POST',
+      hostname: parsed.hostname,
+      port:     parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+      path:     parsed.pathname + parsed.search,
+      method:   'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${TOKEN}`,
+        'Content-Type':   'application/json',
+        'Authorization':  `Bearer ${TOKEN}`,
         'Content-Length': Buffer.byteLength(data),
       },
     };
-    const req = http.request(url, opts, res => {
+    const req = client.request(opts, res => {
       const chunks = [];
       res.on('data', c => chunks.push(c));
       res.on('end', () => resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString() }));

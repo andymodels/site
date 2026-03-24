@@ -57,8 +57,16 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <span className="text-xs font-light tracking-[0.3em] uppercase">Andy Models — Admin</span>
+      <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <img
+            src="/logo.png"
+            alt="Andy Models"
+            className="h-10 w-auto object-contain"
+            onError={e => { e.target.style.display = 'none'; }}
+          />
+          <span className="text-[10px] font-light tracking-[0.3em] uppercase text-gray-400">Admin</span>
+        </div>
         <div className="flex items-center gap-6">
           <Link to="/admin/radio"
             className="text-xs tracking-widest uppercase text-gray-500 hover:text-black transition-colors">

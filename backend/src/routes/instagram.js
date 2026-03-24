@@ -1,93 +1,60 @@
-const db = require('../db');
-
-const FIELDS      = 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp';
-const LIMIT       = 12;
-const CACHE_TTL   = 30 * 60 * 1000;          // 30 min feed cache
-const REFRESH_TTL = 7 * 24 * 60 * 60 * 1000; // refresh token when < 7 days left
-
-let feedCache  = null;
-let cacheAt    = 0;
-
-function getSetting(key) {
-  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
-  return row?.value || null;
-}
-function setSetting(key, value) {
-  db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(key, String(value));
-}
-
-function getToken()  { return getSetting('instagram_access_token') || process.env.INSTAGRAM_ACCESS_TOKEN; }
-function getUserId() { return getSetting('instagram_user_id')      || process.env.INSTAGRAM_USER_ID; }
-
-async function refreshTokenIfNeeded() {
-  const expiresAt = parseInt(getSetting('instagram_token_expires_at') || '0', 10);
-  const remaining = expiresAt - Date.now();
-  if (remaining > REFRESH_TTL) return; // still has > 7 days — no need
-
-  const token = getToken();
-  if (!token) return;
-
-  try {
-    const url = `https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${token}`;
-    const res  = await fetch(url);
-    const json = await res.json();
-    if (json.error) throw new Error(json.error.message);
-
-    setSetting('instagram_access_token', json.access_token);
-    setSetting('instagram_token_expires_at', String(Date.now() + json.expires_in * 1000));
-    console.log(`[instagram] Token renovado. Expira em ${Math.round(json.expires_in / 86400)} dias.`);
-  } catch (e) {
-    console.error('[instagram] Falha ao renovar token:', e.message);
-  }
-}
-
-async function fetchFeed() {
-  await refreshTokenIfNeeded();
-  const token  = getToken();
-  const userId = getUserId();
-  if (!token || !userId) throw new Error('Instagram não configurado');
-
-  const url = `https://graph.instagram.com/${userId}/media?fields=${FIELDS}&limit=${LIMIT}&access_token=${token}`;
-  const res  = await fetch(url);
-  const json = await res.json();
-  if (json.error) throw new Error(json.error.message);
-  return json.data || [];
-}
-
+/**
+ * Instagram via embed client-side — sem token, sem API
+ * Backend apenas armazena URLs dos posts no banco.
+ * Frontend renderiza com o script oficial do Instagram.
+ */
 const router = require('express').Router();
+const db     = require('../db');
 
-router.get('/', async (req, res) => {
+// Garantir tabela de posts do Instagram
+db.exec(`
+  CREATE TABLE IF NOT EXISTS instagram_embeds (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    url        TEXT NOT NULL UNIQUE,
+    position   INTEGER DEFAULT 0,
+    active     INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now'))
+  )
+`);
+
+// GET /api/instagram — retorna lista de URLs para embed
+router.get('/', (req, res) => {
+  const posts = db.prepare(
+    'SELECT id, url, position FROM instagram_embeds WHERE active = 1 ORDER BY position ASC, id DESC LIMIT 12'
+  ).all();
+  res.json(posts);
+});
+
+// POST /api/admin/instagram — adicionar post (admin)
+router.post('/admin', (req, res) => {
+  const { url } = req.body;
+  if (!url || !url.includes('instagram.com')) {
+    return res.status(400).json({ error: 'URL inválida. Cole o link de um post do Instagram.' });
+  }
+  // normalizar URL (remover query strings)
+  const clean = url.split('?')[0].replace(/\/$/, '') + '/';
   try {
-    const now = Date.now();
-    if (!feedCache || now - cacheAt > CACHE_TTL) {
-      feedCache = await fetchFeed();
-      cacheAt   = now;
-    }
-    res.json(feedCache);
+    const row = db.prepare(
+      'INSERT INTO instagram_embeds (url, position) VALUES (?, (SELECT COALESCE(MAX(position),0)+1 FROM instagram_embeds))'
+    ).run(clean);
+    res.json({ id: row.lastInsertRowid, url: clean });
   } catch (e) {
-    if (feedCache) return res.json(feedCache); // serve stale on error
-    res.status(502).json({ error: e.message });
+    if (e.message.includes('UNIQUE')) return res.status(409).json({ error: 'Post já adicionado.' });
+    res.status(500).json({ error: e.message });
   }
 });
 
-// Status endpoint (admin use)
-router.get('/status', (req, res) => {
-  const expiresAt = parseInt(getSetting('instagram_token_expires_at') || '0', 10);
-  const daysLeft  = Math.round((expiresAt - Date.now()) / 86400000);
-  res.json({
-    configured: Boolean(getToken()),
-    token_days_left: daysLeft,
-    cache_age_min: feedCache ? Math.round((Date.now() - cacheAt) / 60000) : null,
-  });
-});
-
-// Force cache purge
-router.delete('/cache', (_req, res) => {
-  feedCache = null; cacheAt = 0;
+// DELETE /api/admin/instagram/:id — remover post (admin)
+router.delete('/admin/:id', (req, res) => {
+  db.prepare('DELETE FROM instagram_embeds WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
 });
 
-// Run a check on startup
-refreshTokenIfNeeded().catch(() => {});
+// PATCH /api/admin/instagram/:id — reordenar (admin)
+router.patch('/admin/:id', (req, res) => {
+  const { position } = req.body;
+  db.prepare('UPDATE instagram_embeds SET position = ? WHERE id = ?').run(position, req.params.id);
+  res.json({ ok: true });
+});
 
 module.exports = router;
