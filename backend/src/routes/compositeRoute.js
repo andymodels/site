@@ -93,18 +93,11 @@ function drawPageFrame(doc, model, pageNum, totalPages) {
     .lineTo(W - MARGIN, MARGIN + HEADER_H)
     .lineWidth(0.4).strokeColor('#ccc').stroke();
 
-  // ── rodapé: medidas + localização + site ──────────────────────────────────
+  // ── rodapé: medidas + site ────────────────────────────────────────────────
   const footerY = H - MARGIN - FOOTER_H + 8;
-  const location = (model.city && String(model.city).trim())
-    ? model.city.toUpperCase()
-    : (model.model_status || 'IN TOWN');
   const measureStr = getMeasures(model);
-  const footerLeft = measureStr
-    ? `${measureStr}   ·   ${location}`
-    : location;
-
   doc.fontSize(6.5).fillColor('#888').font('Helvetica')
-    .text(footerLeft, MARGIN, footerY, { width: W - MARGIN * 2 - 90, lineBreak: false });
+    .text(measureStr, MARGIN, footerY, { width: W - MARGIN * 2 - 90, lineBreak: false });
   doc.fontSize(6.5).fillColor('#bbb').font('Helvetica')
     .text('andymodels.com', W - MARGIN - 90, footerY, { width: 90, align: 'right', lineBreak: false });
 

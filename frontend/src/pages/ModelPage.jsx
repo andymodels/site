@@ -5,16 +5,18 @@ import { parseVideoUrl } from '../utils/videoUtils';
 import { useLanguage } from '../context/LanguageContext';
 
 const MEASURES_WOMEN = [
-  ['height','Height'],['bust','Bust'],['waist','Waist'],
-  ['hips','Hips'],['manequim','Manequim'],['shoes','Shoes'],['eyes','Eyes'],['hair','Hair'],
+  ['height','Height'], ['bust','Bust'], ['waist','Waist'], ['hips','Hips'],
+  ['manequim','Size'], ['shoes','Shoes'], ['hair','Hair'], ['eyes','Eyes'],
 ];
 const MEASURES_MEN = [
-  ['height','Height'],['torax','Tórax'],['terno','Terno'],
-  ['camisa','Camisa'],['manequim','Manequim'],['shoes','Shoes'],['eyes','Eyes'],['hair','Hair'],
+  ['height','Height'], ['torax','Chest'], ['waist','Waist'],
+  ['terno','Suit'], ['camisa','Shirt'], ['manequim','Size'],
+  ['shoes','Shoes'], ['hair','Hair'], ['eyes','Eyes'],
 ];
 function getMeasures(model) {
-  const isMen = model.category === 'men' || (Array.isArray(model.categories) ? model.categories.includes('men') : false);
-  return isMen ? MEASURES_MEN : MEASURES_WOMEN;
+  const cats = (() => { try { return JSON.parse(model.categories || '[]'); } catch { return []; } })();
+  const isMen = model.category === 'men' || cats.includes('men');
+  return (isMen ? MEASURES_MEN : MEASURES_WOMEN).filter(([k]) => model[k] && String(model[k]).trim());
 }
 const CAT_LABEL = { women:'Women', men:'Men', 'new-faces':'New Faces', creators:'Creators' };
 const CAT_PATH  = { women:'/women', men:'/men', 'new-faces':'/new-faces', creators:'/creators' };
@@ -302,7 +304,7 @@ export default function ModelPage() {
     </main>
   );
 
-  const measures = getMeasures(model).filter(([k]) => model[k]);
+  const measures = getMeasures(model);
 
   return (
     <main>
@@ -381,8 +383,10 @@ export default function ModelPage() {
           {/* ── Sidebar ── */}
           <div className="lg:sticky lg:top-8 lg:self-start space-y-0">
             <h1 className="text-[13px] tracking-[0.18em] uppercase font-medium">{model.name}</h1>
-            {model.model_status && (
-              <p className="text-[10px] tracking-[0.14em] uppercase text-gray-400 mt-0.5 mb-6">{model.model_status}</p>
+            {(model.city || model.address_city) && (
+              <p className="text-[10px] tracking-[0.14em] uppercase text-gray-400 mt-0.5 mb-6">
+                {[model.city, model.address_country].filter(Boolean).join(', ')}
+              </p>
             )}
 
             {/* Action buttons */}
