@@ -59,6 +59,19 @@ const translations = {
       newApply: 'Nova inscrição',
     },
     radio: { listen: 'Rádio Andy', by: 'Andy Models' },
+    about: {
+      badge: 'Sobre',
+      title: 'Andy Models',
+      p1: 'A Andy Models é uma agência fundada em 2008, com atuação voltada à descoberta, preparação e desenvolvimento de talentos para o mercado profissional da moda, no Brasil e no exterior.',
+      p2: 'Desde o início, a agência construiu sua reputação com base em curadoria, direcionamento estratégico e leitura real de mercado. Mais do que representar perfis, a Andy Models trabalha na identificação de pessoas com potencial concreto para seguir carreira profissional, desenvolvendo cada etapa com critério, posicionamento e visão de longo prazo.',
+      p3: 'Com foco no mercado internacional, a agência mantém conexões com importantes centros da moda em todo o mundo, incluindo América Latina, Ásia, Europa e Estados Unidos, atuando em sintonia com as exigências do mercado global e com o padrão de seleção adotado por agências de referência no exterior.',
+      p4: 'Nosso trabalho não é baseado em quantidade, mas em precisão. Selecionamos perfis com potencial real e oferecemos direcionamento alinhado às exigências do mercado internacional.',
+      disclaimer: 'A Andy Models não comercializa cursos, books ou pacotes. Nossa atuação é voltada exclusivamente ao mercado profissional.',
+      followLabel: 'Siga a Andy Models no Instagram',
+      mission: { label: 'Missão', text: 'Identificar talentos com potencial real e direcioná-los com estratégia, critério e visão de longo prazo para o mercado profissional.' },
+      vision:  { label: 'Visão',  text: 'Ser reconhecida como uma agência de referência na formação e projeção internacional de novos talentos.' },
+      values:  { label: 'Valores', text: 'Curadoria. Critério. Consistência. Posicionamento. Mercado real.' },
+    },
   },
   en: {
     nav: {
@@ -118,6 +131,19 @@ const translations = {
       newApply: 'New application',
     },
     radio: { listen: 'Andy Radio', by: 'Andy Models' },
+    about: {
+      badge: 'About',
+      title: 'Andy Models',
+      p1: 'Andy Models is an agency founded in 2008, focused on discovering, developing and positioning talents for the professional fashion market in Brazil and worldwide.',
+      p2: 'The agency operates with a strong curatorial approach, identifying profiles with real potential and guiding each stage with strategy, precision and long-term vision.',
+      p3: 'With an international focus, Andy Models maintains connections with major fashion markets across Latin America, Asia, Europe and the United States, aligned with global standards and top agencies.',
+      p4: 'Our work is not based on volume, but on precision. We select talents with real potential and provide direction according to international market demands.',
+      disclaimer: 'Andy Models does not sell courses, portfolios or packages. Our work is exclusively focused on the professional market.',
+      followLabel: 'Follow Andy Models on Instagram',
+      mission: { label: 'Mission', text: 'Identify talents with real potential and guide them with strategy and long-term vision.' },
+      vision:  { label: 'Vision',  text: 'To be recognized as a reference agency in developing and positioning new talents internationally.' },
+      values:  { label: 'Values', text: 'Curation. Precision. Consistency. Positioning. Real market.' },
+    },
   },
 };
 
