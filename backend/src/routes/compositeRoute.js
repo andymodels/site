@@ -172,7 +172,58 @@ router.get('/:slug/composite.pdf', (req, res) => {
   doc.end();
 });
 
-// ── POLAROID — mesmo template do composite ────────────────────────────────────
+// ── POLAROID — página portrait (595 × 842), 1 foto por página ────────────────
+const POL_W = 595;
+const POL_H = 842;
+const POL_HEADER_H = 60;
+const POL_FOOTER_H = 24;
+const POL_PHOTO_X = MARGIN;
+const POL_PHOTO_W = POL_W - MARGIN * 2;
+const POL_PHOTO_TOP = MARGIN + POL_HEADER_H + 6;
+const POL_PHOTO_BOTTOM = POL_H - MARGIN - POL_FOOTER_H - 6;
+const POL_PHOTO_H = POL_PHOTO_BOTTOM - POL_PHOTO_TOP;
+
+function drawPolaroidFrame(doc, model, pageNum, totalPages) {
+  const logoY = MARGIN + 6;
+  const LOGO_H = 34;
+  const NAME_X = MARGIN + 180;
+  const NAME_W = POL_W - NAME_X - MARGIN - 50;
+
+  if (LOGO_PATH) {
+    doc.image(LOGO_PATH, MARGIN, logoY, { height: LOGO_H });
+  } else {
+    doc.fontSize(9).fillColor('#111').font('Helvetica-Bold')
+      .text('ANDY MODELS', MARGIN, logoY + 10, { width: 160, lineBreak: false });
+  }
+
+  doc.fontSize(18).fillColor('#111').font('Helvetica-Bold')
+    .text(model.name.toUpperCase(), NAME_X, logoY + 10, {
+      width: NAME_W,
+      align: 'center',
+      lineBreak: false,
+    });
+
+  doc.fontSize(7).fillColor('#aaa').font('Helvetica')
+    .text(`${pageNum} / ${totalPages}`, POL_W - MARGIN - 50, logoY + 14, {
+      width: 50, align: 'right', lineBreak: false,
+    });
+
+  doc.moveTo(MARGIN, MARGIN + POL_HEADER_H)
+    .lineTo(POL_W - MARGIN, MARGIN + POL_HEADER_H)
+    .lineWidth(0.4).strokeColor('#ccc').stroke();
+
+  const footerY = POL_H - MARGIN - POL_FOOTER_H + 6;
+  const measureStr = getMeasures(model);
+  doc.fontSize(6.5).fillColor('#888').font('Helvetica')
+    .text(measureStr, MARGIN, footerY, { width: POL_W - MARGIN * 2 - 80, lineBreak: false });
+  doc.fontSize(6.5).fillColor('#bbb').font('Helvetica')
+    .text('andymodels.com', POL_W - MARGIN - 80, footerY, { width: 80, align: 'right', lineBreak: false });
+
+  doc.moveTo(MARGIN, POL_H - MARGIN - POL_FOOTER_H)
+    .lineTo(POL_W - MARGIN, POL_H - MARGIN - POL_FOOTER_H)
+    .lineWidth(0.4).strokeColor('#ccc').stroke();
+}
+
 router.get('/:slug/polaroid.pdf', (req, res) => {
   const model = db.prepare('SELECT * FROM models WHERE slug = ? AND active = 1').get(req.params.slug);
   if (!model) return res.status(404).json({ error: 'Not found' });
@@ -183,13 +234,12 @@ router.get('/:slug/polaroid.pdf', (req, res) => {
 
   if (urls.length === 0) return res.status(400).json({ error: 'No images selected' });
 
-  // polaroid: 1 foto por página, centrada — mesma estrutura do composite
   const filename = `polaroid_${safeFilename(model.name)}.pdf`;
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
   const doc = new PDFDoc({
-    size: [PAGE_W, PAGE_H],
+    size: [POL_W, POL_H],
     margins: { top: 0, bottom: 0, left: 0, right: 0 },
     autoFirstPage: false,
     info: { Title: `${model.name} — Polaroid — Andy Models` },
@@ -198,12 +248,8 @@ router.get('/:slug/polaroid.pdf', (req, res) => {
 
   urls.forEach((url, idx) => {
     doc.addPage();
-    drawPageFrame(doc, model, idx + 1, urls.length);
-
-    // polaroid: 1 foto por página, ocupa toda a área horizontal (mesma margem do composite)
-    const fullPhotoW = PHOTO_W * 2 + GAP;
-    const fullPhotoX = MARGIN;
-    drawPhotoCover(doc, urlToPath(url), fullPhotoX, PHOTO_AREA_TOP, fullPhotoW, PHOTO_H);
+    drawPolaroidFrame(doc, model, idx + 1, urls.length);
+    drawPhotoCover(doc, urlToPath(url), POL_PHOTO_X, POL_PHOTO_TOP, POL_PHOTO_W, POL_PHOTO_H);
   });
 
   doc.end();
