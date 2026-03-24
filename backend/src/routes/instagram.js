@@ -4,15 +4,24 @@
 const router    = require('express').Router();
 const db        = require('../db');
 const adminAuth = require('../middleware/auth');
+const multer    = require('multer');
 const https     = require('https');
 const http      = require('http');
 const fs        = require('fs');
 const path      = require('path');
 const config    = require('../config');
 
-const IG_DIR     = path.join(config.uploadsDir, 'instagram');
+const IG_DIR      = path.join(config.uploadsDir, 'instagram');
 const IG_URL_BASE = `${config.uploadsUrl}/instagram`;
 fs.mkdirSync(IG_DIR, { recursive: true });
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_, file, cb) => {
+    cb(null, ['image/jpeg','image/png','image/webp'].includes(file.mimetype));
+  },
+});
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS instagram_embeds (
@@ -195,47 +204,67 @@ router.get('/', (req, res) => {
   res.json(posts);
 });
 
-// POST /api/instagram  — admin
-router.post('/', adminAuth, async (req, res) => {
-  const { url, image_url: manualImage } = req.body || {};
+// Salva buffer de imagem em disco
+function saveImageBuffer(buffer, mimetype) {
+  const ext   = mimetype === 'image/png' ? 'png' : mimetype === 'image/webp' ? 'webp' : 'jpg';
+  const fname = `ig_${Date.now()}.${ext}`;
+  fs.writeFileSync(path.join(IG_DIR, fname), buffer);
+  return { fname, url: `${IG_URL_BASE}/${fname}` };
+}
+
+// POST /api/instagram  — admin (multipart com imagem opcional)
+router.post('/', adminAuth, upload.single('image'), async (req, res) => {
+  const url = (req.body?.url || '').trim();
   if (!url || !url.includes('instagram.com')) {
     return res.status(400).json({ error: 'URL inválida.' });
   }
   const clean = url.split('?')[0].replace(/\/$/, '') + '/';
 
-  // Tenta extração automática; se falhar, salva mesmo assim
-  let image_url = manualImage || null;
+  let image_url  = null;
   let local_file = null;
-  let warning    = null;
-  let suggested  = null;
 
-  if (!manualImage) {
+  // Imagem enviada via upload — prioridade máxima
+  if (req.file) {
+    try {
+      const saved = saveImageBuffer(req.file.buffer, req.file.mimetype);
+      image_url  = saved.url;
+      local_file = saved.fname;
+    } catch (e) {
+      console.error('[instagram] erro ao salvar upload:', e.message);
+    }
+  }
+
+  // Sem upload — tenta extração automática silenciosamente
+  if (!image_url) {
     try {
       const result = await extractAndDownload(clean);
       image_url  = result.image_url;
       local_file = result.local_file;
-      suggested  = result.suggested;
-      if (!result.image_url) {
-        warning = suggested
-          ? 'Imagem não pôde ser salva localmente. URL sugerida preenchida automaticamente — confirme para salvar.'
-          : 'Post salvo sem imagem. Adicione a URL manualmente.';
-      }
-    } catch (e) {
-      console.error('[instagram] erro inesperado:', e.message);
-      warning = 'Post salvo sem imagem.';
-    }
+    } catch {}
   }
 
   try {
     const row = db.prepare(
       'INSERT INTO instagram_embeds (url, image_url, local_file, position) VALUES (?, ?, ?, (SELECT COALESCE(MAX(position),0)+1 FROM instagram_embeds))'
     ).run(clean, image_url, local_file);
-    res.json({ id: row.lastInsertRowid, url: clean, image_url, suggested, warning });
+    res.json({ id: row.lastInsertRowid, url: clean, image_url });
   } catch (e) {
     deleteLocalFile(local_file);
     if (e.message.includes('UNIQUE')) return res.status(409).json({ error: 'Post já adicionado.' });
     res.status(500).json({ error: e.message });
   }
+});
+
+// POST /api/instagram/:id/image  — adicionar/trocar imagem de post existente
+router.post('/:id/image', adminAuth, upload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Nenhuma imagem enviada.' });
+  const row = db.prepare('SELECT local_file FROM instagram_embeds WHERE id=?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Post não encontrado.' });
+  deleteLocalFile(row.local_file);
+  const saved = saveImageBuffer(req.file.buffer, req.file.mimetype);
+  db.prepare('UPDATE instagram_embeds SET image_url=?, local_file=? WHERE id=?')
+    .run(saved.url, saved.fname, req.params.id);
+  res.json({ ok: true, image_url: saved.url });
 });
 
 // DELETE /api/instagram/:id  — admin
@@ -246,12 +275,9 @@ router.delete('/:id', adminAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// PATCH /api/instagram/:id  — reordenar ou atualizar image_url manual
+// PATCH /api/instagram/:id  — reordenar
 router.patch('/:id', adminAuth, (req, res) => {
-  const { position, image_url } = req.body || {};
-  if (image_url !== undefined) {
-    db.prepare('UPDATE instagram_embeds SET image_url=? WHERE id=?').run(image_url || null, req.params.id);
-  }
+  const { position } = req.body || {};
   if (position !== undefined) {
     db.prepare('UPDATE instagram_embeds SET position=? WHERE id=?').run(position, req.params.id);
   }
