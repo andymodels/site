@@ -82,18 +82,18 @@ export default function InscrevaPage() {
 
     const invalid = selected.filter(f => !ALLOWED_IMAGE.includes(f.type));
     if (invalid.length) {
-      setPhotoError('Apenas imagens JPG e PNG são permitidas para fotos.');
+      setPhotoError(T.photoInvalid);
       e.target.value = '';
       return;
     }
     if (photos.length + selected.length > MAX_PHOTOS) {
-      setPhotoError(`Máximo de ${MAX_PHOTOS} fotos. Você já tem ${photos.length} selecionada(s).`);
+      setPhotoError(T.photoOverMax(MAX_PHOTOS, photos.length));
       e.target.value = '';
       return;
     }
     const oversized = selected.filter(f => f.size > MAX_SIZE_MB * 1024 * 1024);
     if (oversized.length) {
-      setPhotoError(`Cada foto deve ter no máximo ${MAX_SIZE_MB}MB.`);
+      setPhotoError(T.photoOverSize(MAX_SIZE_MB));
       e.target.value = '';
       return;
     }
@@ -106,12 +106,12 @@ export default function InscrevaPage() {
     setPdfError('');
     if (!file) return;
     if (file.type !== 'application/pdf') {
-      setPdfError('Apenas arquivos PDF são aceitos neste campo.');
+      setPdfError(T.pdfInvalid);
       e.target.value = '';
       return;
     }
     if (file.size > MAX_PDF_MB * 1024 * 1024) {
-      setPdfError(`O PDF deve ter no máximo ${MAX_PDF_MB}MB.`);
+      setPdfError(T.pdfOverSize(MAX_PDF_MB));
       e.target.value = '';
       return;
     }
@@ -129,7 +129,7 @@ export default function InscrevaPage() {
     setFormError('');
 
     if (photos.length < MIN_PHOTOS) {
-      setPhotoError(`Envie pelo menos ${MIN_PHOTOS} fotos para continuar.`);
+      setPhotoError(T.photoMinRequired(MIN_PHOTOS));
       return;
     }
 
@@ -137,7 +137,7 @@ export default function InscrevaPage() {
     const ig = form.instagram.trim();
     const igUsername = ig.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '').trim();
     if (ig && ig !== 'https://instagram.com/' && igUsername.length === 0) {
-      setFormError('Instagram: informe seu nome de usuário.');
+      setFormError(T.igError);
       return;
     }
 
@@ -156,7 +156,7 @@ export default function InscrevaPage() {
       photos.forEach(p => fd.append('photos', p.file));
       if (pdfFile) fd.append('pdf', pdfFile);
       const res = await fetch('/api/applications', { method: 'POST', body: fd });
-      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || 'Erro ao enviar.'); }
+      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || T.pdfInvalid); }
       setStatus('success');
     } catch (err) {
       setFormError(err.message);
@@ -276,7 +276,7 @@ export default function InscrevaPage() {
                   <input type="tel" required className={inputClass} placeholder={T.fields.whatsappPh} {...field('phone')} />
                 </div>
                 <div>
-                  <label className={labelClass}>Instagram (informe apenas seu usuário)</label>
+                  <label className={labelClass}>{T.fields.instagram}</label>
                   <input type="text" className={inputClass} placeholder="https://instagram.com/seu.usuario" value={form.instagram} onChange={handleInstagram} />
                 </div>
                 <div className="sm:col-span-2">
@@ -340,9 +340,9 @@ export default function InscrevaPage() {
               {/* ── PDF opcional ─────────────────────────────────────────── */}
               <div className="border-t border-gray-200 pt-6">
                 <div className="flex items-baseline justify-between mb-3">
-                  <label className={labelClass}>Material complementar (PDF — opcional)</label>
+                  <label className={labelClass}>{T.pdfLabel}</label>
                   {pdfFile && (
-                    <button type="button" onClick={() => setPdfFile(null)} className="text-[10px] text-gray-400 hover:text-black tracking-wider uppercase">remover</button>
+                    <button type="button" onClick={() => setPdfFile(null)} className="text-[10px] text-gray-400 hover:text-black tracking-wider uppercase">{T.pdfRemove}</button>
                   )}
                 </div>
                 {pdfFile ? (
@@ -356,10 +356,10 @@ export default function InscrevaPage() {
                       onClick={() => pdfRef.current?.click()}
                       className="border border-gray-300 px-4 py-2.5 text-[11px] tracking-[0.14em] uppercase text-gray-600 hover:border-black hover:text-black transition-colors"
                     >
-                      Adicionar PDF
+                      {T.pdfAdd}
                     </button>
                     <p className="text-[10px] text-gray-400 mt-2 tracking-wide">
-                      Somente PDF · Máximo {MAX_PDF_MB}MB
+                      {T.pdfHint}
                     </p>
                   </div>
                 )}

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getModel } from '../api';
 import { parseVideoUrl } from '../utils/videoUtils';
+import { useLanguage } from '../context/LanguageContext';
 
 const MEASURES_WOMEN = [
   ['height','Height'],['bust','Bust'],['waist','Waist'],
@@ -39,8 +40,10 @@ function VideoCard({ item, onClick }) {
   );
 }
 
-// ── Lightbox (uses full-size images) ─────────────────────────────────────────
+// ── Lightbox ──────────────────────────────────────────────────────────────────
 function Lightbox({ items, index, onClose, onPrev, onNext }) {
+  const { t } = useLanguage();
+  const M = t.model;
   const item = items[index];
   const vid  = item?.type === 'video' ? parseVideoUrl(item.url) : null;
 
@@ -87,14 +90,16 @@ function Lightbox({ items, index, onClose, onPrev, onNext }) {
 
       <button onClick={onClose}
         className="absolute top-4 right-5 text-white text-[10px] tracking-[0.2em] uppercase opacity-50 hover:opacity-100 transition-opacity">
-        Fechar
+        {M.close}
       </button>
     </div>
   );
 }
 
-// ── Composite picker (foto + PDF) ────────────────────────────────────────────
+// ── Composite picker ──────────────────────────────────────────────────────────
 function CompositePicker({ images, model, onClose }) {
+  const { t } = useLanguage();
+  const M = t.model;
   const [selected, setSelected] = useState(new Set(images.slice(0, 4).map(i => i.url)));
   const [generating, setGenerating] = useState(false);
 
@@ -121,12 +126,12 @@ function CompositePicker({ images, model, onClose }) {
       onClick={onClose}>
       <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
-          <span className="text-[10px] tracking-[0.2em] uppercase text-black">Composite</span>
+          <span className="text-[10px] tracking-[0.2em] uppercase text-black">{M.compositeTitle}</span>
           <button onClick={onClose} className="text-[10px] tracking-widest uppercase text-gray-400 hover:text-black">×</button>
         </div>
         <div className="px-6 py-5">
           <p className="text-[10px] text-gray-400 mb-4">
-            Selecione as fotos • 2 por página • {selectedArr.length} selecionada{selectedArr.length !== 1 ? 's' : ''}
+            {M.compositeHint} • {M.compositeSelected(selectedArr.length)}
           </p>
           <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 mb-6">
             {images.map((img, i) => {
@@ -153,7 +158,7 @@ function CompositePicker({ images, model, onClose }) {
             onClick={download}
             disabled={selectedArr.length === 0 || generating}
             className="bg-black text-white text-[10px] tracking-[0.2em] uppercase px-6 py-3 hover:bg-gray-800 disabled:opacity-30 transition-colors">
-            {generating ? 'Gerando…' : `Baixar Composite (${selectedArr.length} foto${selectedArr.length !== 1?'s':''})`}
+            {generating ? M.compositeGenerating : M.compositeDownload(selectedArr.length)}
           </button>
         </div>
       </div>
@@ -162,6 +167,8 @@ function CompositePicker({ images, model, onClose }) {
 }
 
 function PolaroidPicker({ images, model, onClose }) {
+  const { t } = useLanguage();
+  const M = t.model;
   const polaroids = images.filter(img => img.polaroid);
   const [selected, setSelected] = useState(new Set(polaroids.length > 0 ? [polaroids[0].url] : []));
   const [generating, setGenerating] = useState(false);
@@ -171,9 +178,9 @@ function PolaroidPicker({ images, model, onClose }) {
       <div className="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center p-4" onClick={onClose}>
         <div className="bg-white max-w-sm w-full p-8 text-center" onClick={e => e.stopPropagation()}>
           <p className="text-[10px] tracking-[0.2em] uppercase text-black mb-2">Polaroid</p>
-          <p className="text-xs text-gray-400 mt-4">Nenhuma foto marcada como polaroid.</p>
-          <p className="text-[9px] text-gray-300 mt-2">Marque fotos como polaroid no admin para que apareçam aqui.</p>
-          <button onClick={onClose} className="mt-6 text-[9px] tracking-widest uppercase text-gray-400 hover:text-black transition-colors">Fechar</button>
+          <p className="text-xs text-gray-400 mt-4">{M.noPolaroidText}</p>
+          <p className="text-[9px] text-gray-300 mt-2">{M.noPolaroidHint}</p>
+          <button onClick={onClose} className="mt-6 text-[9px] tracking-widest uppercase text-gray-400 hover:text-black transition-colors">{M.close}</button>
         </div>
       </div>
     );
@@ -199,11 +206,11 @@ function PolaroidPicker({ images, model, onClose }) {
     <div className="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
-          <span className="text-[10px] tracking-[0.2em] uppercase text-black">Polaroid — {polaroids.length} foto{polaroids.length !== 1 ? 's' : ''}</span>
+          <span className="text-[10px] tracking-[0.2em] uppercase text-black">{M.polaroidTitle(polaroids.length)}</span>
           <button onClick={onClose} className="text-[10px] tracking-widest uppercase text-gray-400 hover:text-black">×</button>
         </div>
         <div className="px-6 py-5">
-          <p className="text-[10px] text-gray-400 mb-4">{selectedArr.length} selecionada{selectedArr.length !== 1 ? 's' : ''}</p>
+          <p className="text-[10px] text-gray-400 mb-4">{M.polaroidSelected(selectedArr.length)}</p>
           <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 mb-6">
             {polaroids.map((img, i) => {
               const sel = selected.has(img.url);
@@ -222,7 +229,7 @@ function PolaroidPicker({ images, model, onClose }) {
           </div>
           <button onClick={download} disabled={selectedArr.length === 0 || generating}
             className="bg-black text-white text-[10px] tracking-[0.2em] uppercase px-6 py-3 hover:bg-gray-800 disabled:opacity-30 transition-colors">
-            {generating ? 'Gerando…' : 'Baixar Polaroid'}
+            {generating ? M.polaroidGenerating : M.polaroidDownload}
           </button>
         </div>
       </div>
@@ -233,6 +240,8 @@ function PolaroidPicker({ images, model, onClose }) {
 // ── Model Page ────────────────────────────────────────────────────────────────
 export default function ModelPage() {
   const { slug } = useParams();
+  const { t } = useLanguage();
+  const M = t.model;
   const [model, setModel]             = useState(null);
   const [loading, setLoading]         = useState(true);
   const [lightboxIdx, setLightboxIdx] = useState(null);
@@ -311,17 +320,17 @@ export default function ModelPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-10 xl:gap-14">
 
-          {/* ── Gallery: thumbnails only, fixed 3:4 ── */}
+          {/* ── Gallery ── */}
           <div>
             {hasPolaroids && (
               <div className="flex items-center gap-5 mb-5">
-                {['galeria','polaroid'].map(v => (
-                  <button key={v} onClick={() => setShowPolaroid(v === 'polaroid')}
+                {[{ key: 'gallery', label: M.gallery }, { key: 'polaroid', label: 'Polaroid' }].map(({ key, label }) => (
+                  <button key={key} onClick={() => setShowPolaroid(key === 'polaroid')}
                     className={`text-[10px] tracking-[0.14em] uppercase transition-colors
-                      ${(showPolaroid ? 'polaroid' : 'galeria') === v
+                      ${(showPolaroid ? 'polaroid' : 'gallery') === key
                         ? 'text-black border-b border-black pb-px'
                         : 'text-gray-400 hover:text-black'}`}>
-                    {v.charAt(0).toUpperCase() + v.slice(1)}
+                    {label}
                   </button>
                 ))}
               </div>
@@ -363,7 +372,7 @@ export default function ModelPage() {
             ) : (
               <div className="flex items-center justify-center py-20">
                 <p className="text-[10px] tracking-widest uppercase text-gray-300">
-                  {showPolaroid ? 'Nenhum polaroid' : 'Sem imagens'}
+                  {showPolaroid ? M.noPolaroids : M.noImages}
                 </p>
               </div>
             )}
@@ -415,14 +424,13 @@ export default function ModelPage() {
             <div className="border-t border-gray-100 mt-8 pt-5">
               <Link to={catPath}
                 className="text-[10px] tracking-[0.14em] uppercase text-gray-400 hover:text-black transition-colors">
-                ← Voltar
+                {M.back}
               </Link>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Lightbox: loads full-size image */}
       {lightboxIdx !== null && (
         <Lightbox
           items={visibleItems}
@@ -433,7 +441,6 @@ export default function ModelPage() {
         />
       )}
 
-      {/* Composite picker */}
       {showComposite && (
         <CompositePicker
           images={imageItems}
@@ -442,7 +449,6 @@ export default function ModelPage() {
         />
       )}
 
-      {/* Polaroid picker */}
       {showPolaroidPicker && (
         <PolaroidPicker
           images={imageItems}

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 const API_BASE = (import.meta.env.VITE_API_URL || '');
 
@@ -28,6 +29,9 @@ function IconWhatsApp() {
 }
 
 export default function ContactPage() {
+  const { t } = useLanguage();
+  const C = t.contact;
+
   const [form, setForm]         = useState({ name:'', email:'', phone:'', instagram:'', message:'', website:'' });
   const [status, setStatus]     = useState('idle');
   const [errorMsg, setErrorMsg] = useState('');
@@ -50,7 +54,7 @@ export default function ContactPage() {
         body:    JSON.stringify(form),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Erro ao enviar.');
+      if (!res.ok) throw new Error(json.error || C.errorFallback);
       setStatus('success');
       setForm({ name:'', email:'', phone:'', instagram:'', message:'', website:'' });
     } catch (err) {
@@ -67,9 +71,9 @@ export default function ContactPage() {
           {/* ── Coluna esquerda ── */}
           <div className="flex flex-col justify-between max-w-sm">
             <div>
-              <p className="text-[11px] tracking-[0.35em] uppercase text-gray-600 font-medium mb-6">Contato</p>
+              <p className="text-[11px] tracking-[0.35em] uppercase text-gray-600 font-medium mb-6">{C.badge}</p>
               <h1 className="text-2xl sm:text-3xl font-extralight tracking-wide leading-snug text-black mb-10">
-                Fale com a gente
+                {C.title}
               </h1>
 
               <div className="space-y-6 border-t border-gray-200 pt-8">
@@ -90,15 +94,14 @@ export default function ContactPage() {
                       text-white bg-[#25D366] px-4 py-2.5 hover:bg-[#1ebe5c] transition-colors self-start"
                   >
                     <IconWhatsApp />
-                    Falar no WhatsApp
+                    {C.whatsappBtn}
                   </a>
                   <p className="text-[10px] text-[#666666] font-light leading-relaxed">
-                    Atendimento via WhatsApp (mensagens).<br />Não atendemos ligações.
+                    {C.whatsappNote1}<br />{C.whatsappNote2}
                   </p>
                 </div>
               </div>
             </div>
-
           </div>
 
           {/* ── Coluna direita: formulário ── */}
@@ -106,15 +109,15 @@ export default function ContactPage() {
             {status === 'success' ? (
               <div className="flex flex-col justify-center h-full min-h-[300px]">
                 <p className="text-[11px] tracking-[0.3em] uppercase text-gray-600 font-medium mb-3">
-                  Mensagem enviada
+                  {C.successBadge}
                 </p>
                 <p className="text-sm font-light text-gray-700">
-                  Recebemos sua mensagem. Entraremos em contato em breve.
+                  {C.successText}
                 </p>
                 <button
                   onClick={() => setStatus('idle')}
                   className="mt-8 text-[11px] tracking-[0.2em] uppercase text-gray-500 hover:text-black transition-colors border-b border-gray-300 pb-px self-start">
-                  Enviar outra mensagem
+                  {C.sendAnother}
                 </button>
               </div>
             ) : (
@@ -123,32 +126,32 @@ export default function ContactPage() {
                   <input type="text" name="website" tabIndex={-1} autoComplete="off" {...field('website')} />
                 </div>
                 <div>
-                  <label className={labelClass}>Nome</label>
-                  <input type="text" required placeholder="Seu nome"
+                  <label className={labelClass}>{C.name}</label>
+                  <input type="text" required placeholder={C.namePh}
                     className={inputClass} {...field('name')} />
                 </div>
 
                 <div>
-                  <label className={labelClass}>Email</label>
-                  <input type="email" required placeholder="Seu email"
+                  <label className={labelClass}>{C.email}</label>
+                  <input type="email" required placeholder={C.emailPh}
                     className={inputClass} {...field('email')} />
                 </div>
 
                 <div>
-                  <label className={labelClass}>Telefone</label>
-                  <input type="tel" placeholder="(00) 00000-0000"
+                  <label className={labelClass}>{C.phone}</label>
+                  <input type="tel" placeholder={C.phonePh}
                     className={inputClass} {...field('phone')} />
                 </div>
 
                 <div>
-                  <label className={labelClass}>Instagram</label>
-                  <input type="text" placeholder="https://instagram.com/seuinstagram"
+                  <label className={labelClass}>{C.instagram}</label>
+                  <input type="text" placeholder={C.instagramPh}
                     className={inputClass} {...field('instagram')} />
                 </div>
 
                 <div>
-                  <label className={labelClass}>Mensagem</label>
-                  <textarea required placeholder="Como podemos ajudar?"
+                  <label className={labelClass}>{C.message}</label>
+                  <textarea required placeholder={C.messagePh}
                     rows={4}
                     className={inputClass + ' resize-none'}
                     {...field('message')} />
@@ -164,7 +167,7 @@ export default function ContactPage() {
                   className="text-[11px] tracking-[0.3em] uppercase border border-black px-8 py-3
                     hover:bg-black hover:text-white transition-colors disabled:opacity-40"
                 >
-                  {status === 'sending' ? 'Enviando…' : 'Enviar'}
+                  {status === 'sending' ? C.sending : C.submit}
                 </button>
               </form>
             )}

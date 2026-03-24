@@ -13,6 +13,23 @@ const translations = {
       women: 'Mulheres', men: 'Homens', creators: 'Criadores',
       'new-faces': 'New Faces', empty: 'Nenhum modelo cadastrado',
     },
+    contact: {
+      badge: 'Contato',
+      title: 'Fale com a gente',
+      whatsappBtn: 'Falar no WhatsApp',
+      whatsappNote1: 'Atendimento via WhatsApp (mensagens).',
+      whatsappNote2: 'Não atendemos ligações.',
+      successBadge: 'Mensagem enviada',
+      successText: 'Recebemos sua mensagem. Entraremos em contato em breve.',
+      sendAnother: 'Enviar outra mensagem',
+      errorFallback: 'Erro ao enviar.',
+      name: 'Nome', namePh: 'Seu nome',
+      email: 'Email', emailPh: 'Seu email',
+      phone: 'Telefone', phonePh: '(00) 00000-0000',
+      instagram: 'Instagram', instagramPh: 'https://instagram.com/seuinstagram',
+      message: 'Mensagem', messagePh: 'Como podemos ajudar?',
+      submit: 'Enviar', sending: 'Enviando…',
+    },
     apply: {
       badge: 'Inscreva-se',
       title: 'Inscreva-se na Andy Models',
@@ -39,6 +56,17 @@ const translations = {
       aboutTitle: 'Sobre a Andy Models',
       aboutHighlight: 'A Andy Models não comercializa cursos, books ou pacotes.',
       aboutText: 'Atuamos exclusivamente no mercado profissional de moda, com representação nacional e internacional, baseada em critérios reais de mercado.',
+      photoInvalid: 'Apenas imagens JPG e PNG são permitidas para fotos.',
+      photoMinRequired: n => `Envie pelo menos ${n} fotos para continuar.`,
+      photoOverMax: (max, cur) => `Máximo de ${max} fotos. Você já tem ${cur} selecionada(s).`,
+      photoOverSize: n => `Cada foto deve ter no máximo ${n}MB.`,
+      pdfInvalid: 'Apenas arquivos PDF são aceitos neste campo.',
+      pdfOverSize: n => `O PDF deve ter no máximo ${n}MB.`,
+      pdfLabel: 'Material complementar (PDF — opcional)',
+      pdfRemove: 'remover',
+      pdfAdd: 'Adicionar PDF',
+      pdfHint: 'Somente PDF · Máximo 10MB',
+      igError: 'Instagram: informe seu nome de usuário.',
       fields: {
         name: 'Nome completo *', namePh: 'Seu nome completo',
         age: 'Idade *', agePh: 'Ex: 20',
@@ -58,7 +86,24 @@ const translations = {
       successText: 'Se o seu perfil estiver alinhado com o nosso mercado, entraremos em contato para agendar uma avaliação presencial.',
       newApply: 'Nova inscrição',
     },
-    radio: { listen: 'Rádio Andy', by: 'Andy Models' },
+    model: {
+      close: 'Fechar',
+      back: '← Voltar',
+      gallery: 'Galeria',
+      noPolaroids: 'Nenhum polaroid',
+      noImages: 'Sem imagens',
+      compositeTitle: 'Composite',
+      compositeHint: 'Selecione as fotos · 2 por página',
+      compositeGenerating: 'Gerando…',
+      compositeDownload: n => `Baixar Composite (${n} foto${n !== 1 ? 's' : ''})`,
+      compositeSelected: n => `${n} selecionada${n !== 1 ? 's' : ''}`,
+      polaroidGenerating: 'Gerando…',
+      polaroidDownload: 'Baixar Polaroid',
+      polaroidSelected: n => `${n} selecionada${n !== 1 ? 's' : ''}`,
+      polaroidTitle: n => `Polaroid — ${n} foto${n !== 1 ? 's' : ''}`,
+      noPolaroidText: 'Nenhuma foto marcada como polaroid.',
+      noPolaroidHint: 'Marque fotos como polaroid no admin para que apareçam aqui.',
+    },
     about: {
       badge: 'Sobre',
       title: 'Andy Models',
@@ -72,6 +117,7 @@ const translations = {
       vision:  { label: 'Visão',  text: 'Ser reconhecida como uma agência de referência na formação e projeção internacional de novos talentos.' },
       values:  { label: 'Valores', text: 'Curadoria. Critério. Consistência. Posicionamento. Mercado real.' },
     },
+    radio: { listen: 'Rádio Andy', by: 'Andy Models' },
   },
   en: {
     nav: {
@@ -84,6 +130,23 @@ const translations = {
     category: {
       women: 'Women', men: 'Men', creators: 'Creators',
       'new-faces': 'New Faces', empty: 'No models registered',
+    },
+    contact: {
+      badge: 'Contact',
+      title: 'Get in touch',
+      whatsappBtn: 'Message on WhatsApp',
+      whatsappNote1: 'WhatsApp only (messages).',
+      whatsappNote2: 'We do not take calls.',
+      successBadge: 'Message sent',
+      successText: "We received your message. We'll be in touch soon.",
+      sendAnother: 'Send another message',
+      errorFallback: 'Failed to send.',
+      name: 'Name', namePh: 'Your name',
+      email: 'Email', emailPh: 'Your email',
+      phone: 'Phone', phonePh: '(00) 00000-0000',
+      instagram: 'Instagram', instagramPh: 'https://instagram.com/yourinstagram',
+      message: 'Message', messagePh: 'How can we help?',
+      submit: 'Send', sending: 'Sending…',
     },
     apply: {
       badge: 'Apply',
@@ -107,10 +170,21 @@ const translations = {
       photoLimit: 'Minimum 3 photos · Maximum 5 photos',
       selectTitle: 'Selection Process',
       selectText1: 'If your profile aligns with our market, we will contact you for an in-person evaluation.',
-      selectText2: 'If you don\'t hear back, the profile did not meet the criteria for this selection.',
+      selectText2: "If you don't hear back, the profile did not meet the criteria for this selection.",
       aboutTitle: 'About Andy Models',
       aboutHighlight: 'Andy Models does not sell courses, portfolios or packages.',
       aboutText: 'We operate exclusively in the professional fashion market, with national and international representation, based on real market criteria.',
+      photoInvalid: 'Only JPG and PNG images are allowed for photos.',
+      photoMinRequired: n => `Please upload at least ${n} photos to continue.`,
+      photoOverMax: (max, cur) => `Maximum of ${max} photos. You already have ${cur} selected.`,
+      photoOverSize: n => `Each photo must be at most ${n}MB.`,
+      pdfInvalid: 'Only PDF files are accepted in this field.',
+      pdfOverSize: n => `The PDF must be at most ${n}MB.`,
+      pdfLabel: 'Additional material (PDF — optional)',
+      pdfRemove: 'remove',
+      pdfAdd: 'Add PDF',
+      pdfHint: 'PDF only · Maximum 10MB',
+      igError: 'Instagram: enter your username.',
       fields: {
         name: 'Full name *', namePh: 'Your full name',
         age: 'Age *', agePh: 'e.g. 20',
@@ -130,7 +204,24 @@ const translations = {
       successText: 'If your profile aligns with our market, we will contact you to schedule an in-person evaluation.',
       newApply: 'New application',
     },
-    radio: { listen: 'Andy Radio', by: 'Andy Models' },
+    model: {
+      close: 'Close',
+      back: '← Back',
+      gallery: 'Gallery',
+      noPolaroids: 'No polaroids',
+      noImages: 'No images',
+      compositeTitle: 'Composite',
+      compositeHint: 'Select photos · 2 per page',
+      compositeGenerating: 'Generating…',
+      compositeDownload: n => `Download Composite (${n} photo${n !== 1 ? 's' : ''})`,
+      compositeSelected: n => `${n} selected`,
+      polaroidGenerating: 'Generating…',
+      polaroidDownload: 'Download Polaroid',
+      polaroidSelected: n => `${n} selected`,
+      polaroidTitle: n => `Polaroid — ${n} photo${n !== 1 ? 's' : ''}`,
+      noPolaroidText: 'No photos marked as polaroid.',
+      noPolaroidHint: 'Mark photos as polaroid in the admin to show them here.',
+    },
     about: {
       badge: 'About',
       title: 'Andy Models',
@@ -144,14 +235,21 @@ const translations = {
       vision:  { label: 'Vision',  text: 'To be recognized as a reference agency in developing and positioning new talents internationally.' },
       values:  { label: 'Values', text: 'Curation. Precision. Consistency. Positioning. Real market.' },
     },
+    radio: { listen: 'Andy Radio', by: 'Andy Models' },
   },
 };
 
 const LanguageContext = createContext({ lang: 'pt', t: translations.pt, toggle: () => {} });
 
 export function LanguageProvider({ children }) {
-  const [lang, setLang] = useState('pt');
-  const toggle = () => setLang(l => (l === 'pt' ? 'en' : 'pt'));
+  const [lang, setLang] = useState(() => {
+    try { return localStorage.getItem('lang') || 'pt'; } catch { return 'pt'; }
+  });
+  const toggle = () => setLang(l => {
+    const next = l === 'pt' ? 'en' : 'pt';
+    try { localStorage.setItem('lang', next); } catch {}
+    return next;
+  });
   return (
     <LanguageContext.Provider value={{ lang, t: translations[lang], toggle }}>
       {children}
