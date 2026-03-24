@@ -257,14 +257,28 @@ router.post('/', adminAuth, upload.single('image'), async (req, res) => {
 
 // POST /api/instagram/:id/image  — adicionar/trocar imagem de post existente
 router.post('/:id/image', adminAuth, upload.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Nenhuma imagem enviada.' });
   const row = db.prepare('SELECT local_file FROM instagram_embeds WHERE id=?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Post não encontrado.' });
+
   deleteLocalFile(row.local_file);
-  const saved = saveImageBuffer(req.file.buffer, req.file.mimetype);
-  db.prepare('UPDATE instagram_embeds SET image_url=?, local_file=? WHERE id=?')
-    .run(saved.url, saved.fname, req.params.id);
-  res.json({ ok: true, image_url: saved.url });
+
+  // Upload de arquivo
+  if (req.file) {
+    const saved = saveImageBuffer(req.file.buffer, req.file.mimetype);
+    db.prepare('UPDATE instagram_embeds SET image_url=?, local_file=? WHERE id=?')
+      .run(saved.url, saved.fname, req.params.id);
+    return res.json({ ok: true, image_url: saved.url });
+  }
+
+  // Link direto da imagem
+  const imageUrl = (req.body?.image_url || '').trim();
+  if (imageUrl) {
+    db.prepare('UPDATE instagram_embeds SET image_url=?, local_file=NULL WHERE id=?')
+      .run(imageUrl, req.params.id);
+    return res.json({ ok: true, image_url: imageUrl });
+  }
+
+  res.status(400).json({ error: 'Envie um arquivo ou cole a URL da imagem.' });
 });
 
 // DELETE /api/instagram/:id  — admin
