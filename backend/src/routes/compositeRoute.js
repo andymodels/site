@@ -202,8 +202,15 @@ router.get('/:slug/polaroid.pdf', (req, res) => {
   pairs.forEach((pair, idx) => {
     doc.addPage();
     drawPageFrame(doc, model, idx + 1, totalPages);
-    drawPhotoCover(doc, urlToPath(pair[0]), PHOTO_LEFT_X, PHOTO_AREA_TOP, PHOTO_W, PHOTO_H);
-    if (pair[1]) drawPhotoCover(doc, urlToPath(pair[1]), PHOTO_RIGHT_X, PHOTO_AREA_TOP, PHOTO_W, PHOTO_H);
+    const pathA = urlToPath(pair[0]);
+    const pathB = pair[1] ? urlToPath(pair[1]) : null;
+    if (pathB) {
+      drawPhotoCover(doc, pathA, MARGIN,                  PHOTO_AREA_TOP, PHOTO_W, PHOTO_H);
+      drawPhotoCover(doc, pathB, MARGIN + PHOTO_W + GAP,  PHOTO_AREA_TOP, PHOTO_W, PHOTO_H);
+    } else {
+      const singleX = (PAGE_W - PHOTO_W) / 2;
+      drawPhotoCover(doc, pathA, singleX, PHOTO_AREA_TOP, PHOTO_W, PHOTO_H);
+    }
   });
 
   doc.end();
