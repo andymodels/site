@@ -136,11 +136,10 @@ export default function AdminApplications() {
                   const isActive = selected?.id === app.id;
                   return (
                     <div key={app.id}
-                      onClick={() => setSelected(app)}
-                      className={`bg-white border transition-colors cursor-pointer px-5 py-4 flex items-center gap-5 ${
+                      className={`bg-white border transition-colors px-5 py-4 flex items-center gap-5 group ${
                         isActive ? 'border-black' : 'border-gray-100 hover:border-gray-300'
                       }`}>
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelected(app)}>
                         <div className="flex items-center gap-3">
                           <p className="text-sm font-medium text-black truncate">{app.name}</p>
                           <span className={`text-[9px] tracking-wider uppercase px-2 py-0.5 border rounded-sm ${st.color}`}>
@@ -157,6 +156,15 @@ export default function AdminApplications() {
                       <p className="text-[10px] text-gray-300 flex-shrink-0">
                         {new Date(app.created_at).toLocaleDateString('pt-BR')}
                       </p>
+                      <button
+                        onClick={e => { e.stopPropagation(); remove(app.id); }}
+                        title="Apagar cadastro"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-red-500 flex-shrink-0"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                        </svg>
+                      </button>
                     </div>
                   );
                 })}
