@@ -104,6 +104,9 @@ async function sendApplicationEmail(appData, photoFiles, pdfFile) {
   return { ok: true };
 }
 
+// Garantir coluna thumb_url existe
+try { db.prepare('ALTER TABLE applications ADD COLUMN thumb_url TEXT').run(); } catch {}
+
 // ── POST /api/applications ─────────────────────────────────────────────────
 router.post('/', upload.fields([{ name: 'photos', maxCount: 5 }, { name: 'pdf', maxCount: 1 }]), async (req, res) => {
   const { name, email, phone, age, height, city, state, instagram, category } = req.body;
@@ -161,9 +164,6 @@ router.post('/', upload.fields([{ name: 'photos', maxCount: 5 }, { name: 'pdf', 
   }
 
   // 3. Salvar dados no banco (thumb_url é permanente; photos são temporárias)
-  // Garante coluna thumb_url existe (migração lazy)
-  try { db.prepare('ALTER TABLE applications ADD COLUMN thumb_url TEXT').run(); } catch {}
-
   const result = db.prepare(`
     INSERT INTO applications
       (name, email, phone, age, height, city, state, instagram, category, photos, thumb_url, status)
