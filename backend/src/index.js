@@ -38,7 +38,6 @@ app.use('/uploads', express.static(uploadsDir));
 
 app.use('/api/admin/auth',   require('./routes/adminAuth'));
 app.use('/api/admin/models', require('./routes/adminModels'));
-app.use('/api/admin/sync',   require('./routes/adminSync'));
 app.use('/api/admin/home',   require('./routes/homeContent'));
 app.use('/api/models',       require('./routes/publicModels'));
 app.use('/api/models',       require('./routes/compositeRoute'));
@@ -72,19 +71,6 @@ app.get('*', (req, res) => {
 
 app.listen(config.port, () => {
   console.log(`Backend running on port ${config.port}`);
-
-  const { runSync } = require('./services/driveSync');
-  const intervalMs = config.drive.syncIntervalMs;
-
-  setTimeout(() => {
-    console.log('[driveSync] Iniciando primeira sincronização automática...');
-    runSync().catch(e => console.error('[driveSync]', e.message));
-  }, 10 * 1000);
-
-  setInterval(() => {
-    console.log(`[driveSync] Sincronização automática (a cada ${intervalMs / 60000}min)...`);
-    runSync().catch(e => console.error('[driveSync]', e.message));
-  }, intervalMs);
 
   const { startCleanupScheduler } = require('./services/cleanup');
   startCleanupScheduler();

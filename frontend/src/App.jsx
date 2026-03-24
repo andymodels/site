@@ -15,7 +15,7 @@ import ModelPage from './pages/ModelPage';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ModelForm from './pages/admin/ModelForm';
-import AdminSync from './pages/admin/AdminSync';
+import AdminHome from './pages/admin/AdminHome';
 import AdminRadioPage from './pages/admin/AdminRadioPage';
 import AdminApplications from './pages/admin/AdminApplications';
 import AdminInstagram from './pages/admin/AdminInstagram';
@@ -50,8 +50,8 @@ export default function App() {
               element={<ProtectedRoute><ModelForm /></ProtectedRoute>}
             />
             <Route
-              path="/admin/sync"
-              element={<ProtectedRoute><AdminSync /></ProtectedRoute>}
+              path="/admin/home"
+              element={<ProtectedRoute><AdminHome /></ProtectedRoute>}
             />
             <Route
               path="/admin/radio"
