@@ -85,7 +85,7 @@ export default function AdminInstagram() {
         <form onSubmit={add} className="mb-10">
           <div className="flex gap-3">
             <input
-              type="url"
+              type="text"
               value={url}
               onChange={e => setUrl(e.target.value)}
               placeholder="https://www.instagram.com/p/XXXXXXXX/"
