@@ -31,7 +31,7 @@ export default function RadioMini() {
             x1={x} x2={x}
             y1={playing ? (11 - hFull / 2) : (11 - hSmall / 2)}
             y2={playing ? (11 + hFull / 2) : (11 + hSmall / 2)}
-            stroke={playing ? '#E8820C' : '#999'}
+            stroke={playing ? '#E8820C' : '#111111'}
             strokeWidth="2.5"
             style={playing ? {
               animation: `soundbar 0.7s ease-in-out infinite`,
@@ -44,7 +44,7 @@ export default function RadioMini() {
 
       {/* Label ON / OFF */}
       <span className={`text-[8px] tracking-[0.25em] uppercase font-semibold transition-colors ${
-        playing ? 'text-[#E8820C]' : 'text-black/30 group-hover:text-black/60'
+        playing ? 'text-[#E8820C]' : 'text-black'
       }`}>
         {playing ? 'on' : 'off'}
       </span>
