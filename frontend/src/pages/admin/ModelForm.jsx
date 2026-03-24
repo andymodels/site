@@ -393,18 +393,7 @@ export default function ModelForm() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
               <label className={lbl}>Status do Modelo</label>
-              <select className={input} value={form.model_status} onChange={e => setForm(p => ({ ...p, model_status: e.target.value }))}>
-                <option value="In Town">In Town</option>
-                <option value="Introducing">Introducing</option>
-                <option value="Brasil">Brasil</option>
-                <option value="Milan">Milan</option>
-                <option value="Paris">Paris</option>
-                <option value="New York">New York</option>
-                <option value="London">London</option>
-                <option value="Tokyo">Tokyo</option>
-                <option value="Colombia">Colombia</option>
-                <option value="Argentina">Argentina</option>
-              </select>
+              <input type="text" className={input} placeholder="Ex: In Town, Milan, Paris, Introducing…" {...field('model_status')} />
             </div>
           </div>
         </section>
