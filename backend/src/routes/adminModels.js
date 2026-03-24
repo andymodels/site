@@ -14,7 +14,9 @@ function slugify(text) {
 }
 
 function parseField(raw, fallback) {
-  if (raw === undefined) return fallback;
+  if (raw === undefined || raw === null) return fallback;
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'object') return raw;
   try { return JSON.parse(raw); } catch { return fallback; }
 }
 
