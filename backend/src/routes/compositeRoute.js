@@ -200,9 +200,10 @@ router.get('/:slug/polaroid.pdf', (req, res) => {
     doc.addPage();
     drawPageFrame(doc, model, idx + 1, urls.length);
 
-    // polaroid: foto centrada com largura de uma coluna — idêntico ao composite de foto ímpar
-    const singleX = (PAGE_W - PHOTO_W) / 2;
-    drawPhotoCover(doc, urlToPath(url), singleX, PHOTO_AREA_TOP, PHOTO_W, PHOTO_H);
+    // polaroid: 1 foto por página, ocupa toda a área horizontal (mesma margem do composite)
+    const fullPhotoW = PHOTO_W * 2 + GAP;
+    const fullPhotoX = MARGIN;
+    drawPhotoCover(doc, urlToPath(url), fullPhotoX, PHOTO_AREA_TOP, fullPhotoW, PHOTO_H);
   });
 
   doc.end();
