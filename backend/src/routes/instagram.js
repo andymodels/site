@@ -30,39 +30,33 @@ try { db.prepare('ALTER TABLE instagram_embeds ADD COLUMN local_file TEXT').run(
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
-function fetchText(url, maxBytes = 80000, timeoutMs = 5000) {
-  return new Promise((resolve) => {
-    const lib = url.startsWith('https') ? https : http;
-    let settled = false;
-    const done = (v) => { if (!settled) { settled = true; resolve(v); } };
-
-    const timer = setTimeout(() => { req.destroy(); done(''); }, timeoutMs);
-
-    const req = lib.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-    }, (res) => {
-      if ([301,302,307,308].includes(res.statusCode) && res.headers.location) {
-        clearTimeout(timer);
-        return fetchText(res.headers.location, maxBytes, timeoutMs).then(done);
-      }
-      let body = '';
-      res.on('data', chunk => { body += chunk; if (body.length > maxBytes) req.destroy(); });
-      res.on('end', () => { clearTimeout(timer); done(body); });
-    });
-    req.on('error', () => { clearTimeout(timer); done(''); });
-    req.on('timeout', () => { req.destroy(); done(''); });
-  });
-}
-
-function downloadFile(url, destPath, timeoutMs = 8000) {
+function fetchJSON(url, timeoutMs = 6000) {
   return new Promise((resolve, reject) => {
     const lib = url.startsWith('https') ? https : http;
     let settled = false;
-    const fail  = (e) => { if (!settled) { settled = true; reject(e); } };
-    const ok    = ()  => { if (!settled) { settled = true; resolve(); } };
+    const fail = (e) => { if (!settled) { settled = true; reject(e); } };
+    const ok   = (v) => { if (!settled) { settled = true; resolve(v); } };
+
+    const timer = setTimeout(() => { req.destroy(); fail(new Error('timeout')); }, timeoutMs);
+
+    const req = lib.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (res) => {
+      let body = '';
+      res.on('data', c => { body += c; });
+      res.on('end', () => {
+        clearTimeout(timer);
+        try { ok(JSON.parse(body)); } catch { fail(new Error('JSON inválido')); }
+      });
+    });
+    req.on('error', (e) => { clearTimeout(timer); fail(e); });
+  });
+}
+
+function downloadFile(url, destPath, timeoutMs = 10000) {
+  return new Promise((resolve, reject) => {
+    const lib = url.startsWith('https') ? https : http;
+    let settled = false;
+    const fail = (e) => { if (!settled) { settled = true; reject(e); } };
+    const ok   = ()  => { if (!settled) { settled = true; resolve(); } };
 
     const timer = setTimeout(() => { req.destroy(); fail(new Error('timeout')); }, timeoutMs);
 
@@ -77,44 +71,75 @@ function downloadFile(url, destPath, timeoutMs = 8000) {
       stream.on('finish', () => { clearTimeout(timer); ok(); });
       stream.on('error',  (e) => { clearTimeout(timer); fail(e); });
     });
-    req.on('error',   (e) => { clearTimeout(timer); fail(e); });
-    req.on('timeout', ()  => { req.destroy(); fail(new Error('timeout')); });
+    req.on('error', (e) => { clearTimeout(timer); fail(e); });
   });
 }
 
 async function extractAndDownload(postUrl) {
-  console.log(`[instagram] buscando og:image para: ${postUrl}`);
-  const html = await fetchText(postUrl);
+  const token = process.env.INSTAGRAM_TOKEN;
 
-  if (!html) {
-    console.warn('[instagram] Instagram bloqueou ou timeout na requisição de página.');
-    return { image_url: null, local_file: null, blocked: true };
+  // ── Tenta oEmbed API (confiável, usa token do Instagram) ─────────────────
+  if (token) {
+    try {
+      const oembedUrl = `https://graph.facebook.com/v1.0/instagram_oembed?url=${encodeURIComponent(postUrl)}&fields=thumbnail_url&access_token=${token}`;
+      console.log('[instagram] usando oEmbed API...');
+      const data = await fetchJSON(oembedUrl);
+      if (data.thumbnail_url) {
+        console.log('[instagram] thumbnail_url obtido via oEmbed');
+        const ext   = 'jpg';
+        const fname = `ig_${Date.now()}.${ext}`;
+        const fpath = path.join(IG_DIR, fname);
+        await downloadFile(data.thumbnail_url, fpath);
+        console.log(`[instagram] imagem salva: ${fname}`);
+        return { image_url: `${IG_URL_BASE}/${fname}`, local_file: fname, blocked: false };
+      }
+    } catch (e) {
+      console.warn(`[instagram] oEmbed falhou: ${e.message} — tentando og:image`);
+    }
   }
 
-  const match = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
-             || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+  // ── Fallback: scraping og:image ──────────────────────────────────────────
+  console.log('[instagram] tentando og:image scraping...');
+  return scrapeOgImage(postUrl);
+}
 
-  if (!match) {
-    console.warn('[instagram] og:image não encontrado no HTML.');
-    return { image_url: null, local_file: null, blocked: false };
-  }
+function scrapeOgImage(postUrl, timeoutMs = 5000) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = (v) => { if (!settled) { settled = true; resolve(v); } };
+    const empty = { image_url: null, local_file: null, blocked: false };
 
-  const ogImage = match[1].replace(/&amp;/g, '&');
-  console.log(`[instagram] og:image encontrado: ${ogImage.slice(0, 80)}...`);
+    const timer = setTimeout(() => {
+      console.warn('[instagram] scraping timeout');
+      req.destroy(); done({ ...empty, blocked: true });
+    }, timeoutMs);
 
-  const ext   = ogImage.match(/\.(jpg|jpeg|png|webp)/i)?.[1] || 'jpg';
-  const fname = `ig_${Date.now()}.${ext}`;
-  const fpath = path.join(IG_DIR, fname);
-
-  try {
-    await downloadFile(ogImage, fpath);
-    console.log(`[instagram] imagem salva: ${fname}`);
-    return { image_url: `${IG_URL_BASE}/${fname}`, local_file: fname, blocked: false };
-  } catch (e) {
-    console.error(`[instagram] falha no download da imagem: ${e.message}`);
-    try { fs.unlinkSync(fpath); } catch {}
-    return { image_url: null, local_file: null, blocked: false };
-  }
+    const req = https.get(postUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)', 'Accept-Language': 'en' },
+    }, (res) => {
+      let body = '';
+      res.on('data', c => { body += c; if (body.length > 80000) req.destroy(); });
+      res.on('end', async () => {
+        clearTimeout(timer);
+        const m = body.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+               || body.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+        if (!m) { console.warn('[instagram] og:image não encontrado'); return done({ ...empty, blocked: !body }); }
+        const ogImage = m[1].replace(/&amp;/g, '&');
+        const ext   = ogImage.match(/\.(jpg|jpeg|png|webp)/i)?.[1] || 'jpg';
+        const fname = `ig_${Date.now()}.${ext}`;
+        const fpath = path.join(IG_DIR, fname);
+        try {
+          await downloadFile(ogImage, fpath);
+          done({ image_url: `${IG_URL_BASE}/${fname}`, local_file: fname, blocked: false });
+        } catch (e) {
+          console.error(`[instagram] download falhou: ${e.message}`);
+          try { fs.unlinkSync(fpath); } catch {}
+          done(empty);
+        }
+      });
+    });
+    req.on('error', () => { clearTimeout(timer); done({ ...empty, blocked: true }); });
+  });
 }
 
 function deleteLocalFile(fname) {

@@ -22,6 +22,7 @@ module.exports = {
   uploadsDir: process.env.UPLOADS_DIR || path.join(__dirname, '../../uploads'),
   uploadsUrl: process.env.UPLOADS_URL || '/uploads',
   dbPath: process.env.DB_PATH || path.join(__dirname, '../../data/andy_models.db'),
+  instagramToken: process.env.INSTAGRAM_TOKEN || null,
   drive: {
     folderFeminino: process.env.DRIVE_FOLDER_FEMININO || '15Tc0AC60g_67Gd-EujSu2eWGm8I-78bn',
     folderMasculino: process.env.DRIVE_FOLDER_MASCULINO || '1LgDoGg9deOLOjhRtZaLBM6QgTyH3FlEt',
@@ -29,6 +30,6 @@ module.exports = {
     sheetMasculino: process.env.PLANILHA_MASCULINO_ID || '1lVPjjCSQrlMaqa5L41uQOuCP8mOOVtGjdSB2jl4soag',
     syncIntervalMs: parseInt(process.env.DRIVE_SYNC_INTERVAL_MS) || 30 * 60 * 1000,
     maxImagesPerModel: parseInt(process.env.DRIVE_SYNC_MAX_IMAGES) || 10,
-    syncImages: process.env.DRIVE_SYNC_IMAGES !== 'false' ? false : false, // disabled: import images via URL
+    syncImages: false,
   },
 };
