@@ -3,14 +3,16 @@ import { useState } from 'react';
 const API_BASE = (import.meta.env.VITE_API_URL || '');
 
 const inputClass = `
-  w-full border-0 border-b border-gray-200 bg-transparent
-  px-0 py-2.5 text-sm font-light text-black placeholder-gray-300
+  w-full border-0 border-b border-gray-300 bg-transparent
+  px-0 py-2.5 text-sm font-light text-black placeholder-gray-400
   outline-none focus:border-black transition-colors
 `.trim();
 
+const labelClass = 'text-[11px] tracking-[0.22em] uppercase text-gray-600 font-medium block mb-1.5';
+
 function IconEmail() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="shrink-0 text-gray-400">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="shrink-0 text-gray-500">
       <rect x="2" y="4" width="20" height="16" rx="2"/>
       <polyline points="2,4 12,13 22,4"/>
     </svg>
@@ -26,8 +28,8 @@ function IconWhatsApp() {
 }
 
 export default function ContactPage() {
-  const [form, setForm]       = useState({ name:'', email:'', phone:'', instagram:'', message:'' });
-  const [status, setStatus]   = useState('idle'); // idle | sending | success | error
+  const [form, setForm]         = useState({ name:'', email:'', phone:'', instagram:'', message:'' });
+  const [status, setStatus]     = useState('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
   function field(key) {
@@ -65,22 +67,20 @@ export default function ContactPage() {
           {/* ── Coluna esquerda ── */}
           <div className="flex flex-col justify-between max-w-sm">
             <div>
-              <p className="text-[9px] tracking-[0.35em] uppercase text-gray-400 mb-6">Contato</p>
-              <h1 className="text-2xl sm:text-3xl font-extralight tracking-wide leading-snug mb-10">
+              <p className="text-[11px] tracking-[0.35em] uppercase text-gray-600 font-medium mb-6">Contato</p>
+              <h1 className="text-2xl sm:text-3xl font-extralight tracking-wide leading-snug text-black mb-10">
                 Fale com a gente
               </h1>
 
-              <div className="space-y-6 border-t border-gray-100 pt-8">
-                {/* Email */}
+              <div className="space-y-6 border-t border-gray-200 pt-8">
                 <a href="mailto:msn@andymodels.com"
                   className="flex items-center gap-3 group">
                   <IconEmail />
-                  <span className="text-sm font-light text-gray-600 group-hover:text-black transition-colors">
+                  <span className="text-sm font-light text-gray-700 group-hover:text-black transition-colors">
                     msn@andymodels.com
                   </span>
                 </a>
 
-                {/* WhatsApp */}
                 <a
                   href="https://wa.me/5527992379073"
                   target="_blank"
@@ -94,7 +94,7 @@ export default function ContactPage() {
               </div>
             </div>
 
-            <p className="text-[10px] tracking-[0.1em] text-gray-300 mt-12 hidden lg:block">
+            <p className="text-[11px] tracking-[0.1em] text-gray-500 mt-12 hidden lg:block">
               +55 27 99237-9073
             </p>
           </div>
@@ -103,56 +103,46 @@ export default function ContactPage() {
           <div>
             {status === 'success' ? (
               <div className="flex flex-col justify-center h-full min-h-[300px]">
-                <p className="text-[10px] tracking-[0.3em] uppercase text-gray-400 mb-3">
+                <p className="text-[11px] tracking-[0.3em] uppercase text-gray-600 font-medium mb-3">
                   Mensagem enviada
                 </p>
-                <p className="text-sm font-light text-gray-500">
+                <p className="text-sm font-light text-gray-700">
                   Recebemos sua mensagem. Entraremos em contato em breve.
                 </p>
                 <button
                   onClick={() => setStatus('idle')}
-                  className="mt-8 text-[10px] tracking-[0.2em] uppercase text-gray-400 hover:text-black transition-colors border-b border-gray-200 pb-px self-start">
+                  className="mt-8 text-[11px] tracking-[0.2em] uppercase text-gray-500 hover:text-black transition-colors border-b border-gray-300 pb-px self-start">
                   Enviar outra mensagem
                 </button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-7">
                 <div>
-                  <label className="text-[9px] tracking-[0.25em] uppercase text-gray-400 block mb-1">
-                    Nome
-                  </label>
+                  <label className={labelClass}>Nome</label>
                   <input type="text" required placeholder="Seu nome"
                     className={inputClass} {...field('name')} />
                 </div>
 
                 <div>
-                  <label className="text-[9px] tracking-[0.25em] uppercase text-gray-400 block mb-1">
-                    Email
-                  </label>
+                  <label className={labelClass}>Email</label>
                   <input type="email" required placeholder="Seu email"
                     className={inputClass} {...field('email')} />
                 </div>
 
                 <div>
-                  <label className="text-[9px] tracking-[0.25em] uppercase text-gray-400 block mb-1">
-                    Telefone
-                  </label>
+                  <label className={labelClass}>Telefone</label>
                   <input type="tel" placeholder="(00) 00000-0000"
                     className={inputClass} {...field('phone')} />
                 </div>
 
                 <div>
-                  <label className="text-[9px] tracking-[0.25em] uppercase text-gray-400 block mb-1">
-                    Instagram
-                  </label>
-                  <input type="text" placeholder="@seuinstagram"
+                  <label className={labelClass}>Instagram</label>
+                  <input type="text" placeholder="https://instagram.com/seuinstagram"
                     className={inputClass} {...field('instagram')} />
                 </div>
 
                 <div>
-                  <label className="text-[9px] tracking-[0.25em] uppercase text-gray-400 block mb-1">
-                    Mensagem
-                  </label>
+                  <label className={labelClass}>Mensagem</label>
                   <textarea required placeholder="Como podemos ajudar?"
                     rows={4}
                     className={inputClass + ' resize-none'}
@@ -166,7 +156,7 @@ export default function ContactPage() {
                 <button
                   type="submit"
                   disabled={status === 'sending'}
-                  className="text-[10px] tracking-[0.3em] uppercase border border-black px-8 py-3
+                  className="text-[11px] tracking-[0.3em] uppercase border border-black px-8 py-3
                     hover:bg-black hover:text-white transition-colors disabled:opacity-40"
                 >
                   {status === 'sending' ? 'Enviando…' : 'Enviar'}
