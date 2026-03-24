@@ -81,22 +81,24 @@ export default function ContactPage() {
                   </span>
                 </a>
 
-                <a
-                  href="https://wa.me/5527992379073"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2.5 text-[10px] tracking-[0.15em] uppercase
-                    text-white bg-[#25D366] px-4 py-2.5 hover:bg-[#1ebe5c] transition-colors"
-                >
-                  <IconWhatsApp />
-                  Falar no WhatsApp
-                </a>
+                <div className="flex flex-col gap-2">
+                  <a
+                    href="https://wa.me/5527992379073"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2.5 text-[10px] tracking-[0.15em] uppercase
+                      text-white bg-[#25D366] px-4 py-2.5 hover:bg-[#1ebe5c] transition-colors self-start"
+                  >
+                    <IconWhatsApp />
+                    Falar no WhatsApp
+                  </a>
+                  <p className="text-[10px] text-[#666666] font-light leading-relaxed">
+                    Atendimento via WhatsApp (mensagens).<br />Não atendemos ligações.
+                  </p>
+                </div>
               </div>
             </div>
 
-            <p className="text-[11px] tracking-[0.1em] text-gray-500 mt-12 hidden lg:block">
-              +55 27 99237-9073
-            </p>
           </div>
 
           {/* ── Coluna direita: formulário ── */}
