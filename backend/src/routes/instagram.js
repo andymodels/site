@@ -151,32 +151,38 @@ router.get('/', (req, res) => {
 
 // POST /api/instagram  — admin
 router.post('/', adminAuth, async (req, res) => {
-  const { url } = req.body || {};
+  const { url, image_url: manualImage } = req.body || {};
   if (!url || !url.includes('instagram.com')) {
     return res.status(400).json({ error: 'URL inválida.' });
   }
   const clean = url.split('?')[0].replace(/\/$/, '') + '/';
 
-  let result = { image_url: null, local_file: null, blocked: false };
-  try {
-    result = await extractAndDownload(clean);
-  } catch (e) {
-    console.error('[instagram] erro inesperado:', e.message);
-  }
+  // Tenta extração automática; se falhar, salva mesmo assim
+  let image_url = manualImage || null;
+  let local_file = null;
+  let warning = null;
 
-  if (result.blocked) {
-    return res.status(422).json({
-      error: 'Não foi possível extrair a imagem do post. O Instagram bloqueou a requisição. Tente novamente em instantes.',
-    });
+  if (!manualImage) {
+    try {
+      const result = await extractAndDownload(clean);
+      image_url  = result.image_url;
+      local_file = result.local_file;
+      if (result.blocked || !result.image_url) {
+        warning = 'Post salvo sem imagem (Instagram bloqueou a extração automática). Adicione a URL da imagem manualmente se necessário.';
+      }
+    } catch (e) {
+      console.error('[instagram] erro inesperado:', e.message);
+      warning = 'Post salvo sem imagem.';
+    }
   }
 
   try {
     const row = db.prepare(
       'INSERT INTO instagram_embeds (url, image_url, local_file, position) VALUES (?, ?, ?, (SELECT COALESCE(MAX(position),0)+1 FROM instagram_embeds))'
-    ).run(clean, result.image_url, result.local_file);
-    res.json({ id: row.lastInsertRowid, url: clean, image_url: result.image_url });
+    ).run(clean, image_url, local_file);
+    res.json({ id: row.lastInsertRowid, url: clean, image_url, warning });
   } catch (e) {
-    deleteLocalFile(result.local_file);
+    deleteLocalFile(local_file);
     if (e.message.includes('UNIQUE')) return res.status(409).json({ error: 'Post já adicionado.' });
     res.status(500).json({ error: e.message });
   }
@@ -190,10 +196,15 @@ router.delete('/:id', adminAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// PATCH /api/instagram/:id  — reordenar
+// PATCH /api/instagram/:id  — reordenar ou atualizar image_url manual
 router.patch('/:id', adminAuth, (req, res) => {
-  const { position } = req.body || {};
-  db.prepare('UPDATE instagram_embeds SET position=? WHERE id=?').run(position, req.params.id);
+  const { position, image_url } = req.body || {};
+  if (image_url !== undefined) {
+    db.prepare('UPDATE instagram_embeds SET image_url=? WHERE id=?').run(image_url || null, req.params.id);
+  }
+  if (position !== undefined) {
+    db.prepare('UPDATE instagram_embeds SET position=? WHERE id=?').run(position, req.params.id);
+  }
   res.json({ ok: true });
 });
 
