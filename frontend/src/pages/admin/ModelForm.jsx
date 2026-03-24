@@ -13,7 +13,7 @@ const ALL_CATEGORIES = [
 const EMPTY = {
   name: '', age: '', height: '', bust: '', waist: '',
   hips: '', shoes: '', eyes: '', hair: '', city: '', bio: '',
-  featured: false, active: true,
+  featured: false, active: true, home_order: '',
   torax: '', terno: '', camisa: '', manequim: '',
   model_status: 'In Town',
   phone: '', phone2: '', email: '', whatsapp: '',
@@ -137,6 +137,7 @@ export default function ModelForm() {
           shoes: model.shoes || '', eyes: model.eyes || '', hair: model.hair || '',
           city: model.city || '', bio: model.bio || '',
           featured: Boolean(model.featured), active: model.active !== 0,
+          home_order: model.home_order ?? '',
           torax: model.torax || '', terno: model.terno || '', camisa: model.camisa || '', manequim: model.manequim || '',
           model_status: model.model_status || 'In Town',
           phone: model.phone || '', phone2: model.phone2 || '', email: model.email || '', whatsapp: model.whatsapp || '',
@@ -639,6 +640,18 @@ export default function ModelForm() {
                 <span className="text-xs tracking-widest uppercase text-gray-600">{l}</span>
               </label>
             ))}
+            {form.featured && (
+              <label className="flex items-center gap-2">
+                <span className="text-xs tracking-widest uppercase text-gray-400">Ordem na home</span>
+                <input
+                  type="number" min="1"
+                  value={form.home_order}
+                  onChange={e => setForm(p => ({ ...p, home_order: e.target.value }))}
+                  placeholder="—"
+                  className="w-16 border-b border-gray-300 bg-transparent text-xs text-center py-1 outline-none focus:border-black"
+                />
+              </label>
+            )}
           </div>
         </section>
 

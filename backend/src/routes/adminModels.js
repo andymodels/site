@@ -45,7 +45,7 @@ router.get('/:id', (req, res) => {
 router.post('/', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 20 }]), async (req, res) => {
   try {
     const { name, age, height, bust, waist, hips, shoes, eyes, hair, city, bio, featured, active,
-      torax, terno, camisa, manequim, model_status,
+      torax, terno, camisa, manequim, model_status, home_order,
       phone, phone2, email, whatsapp,
       cpf, rg, passport, passport_expiry, visa_type, visa_expiry, nationality,
       address, address_city, address_state, address_country, address_zip,
@@ -108,7 +108,7 @@ router.post('/', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'g
     const result = db.prepare(`
       INSERT INTO models (name, slug, category, categories, age, height, bust, waist, hips, shoes, eyes, hair, city, bio,
         cover_image, cover_thumb, images, media, featured, active,
-        torax, terno, camisa, manequim, model_status,
+        torax, terno, camisa, manequim, model_status, home_order,
         phone, phone2, email, whatsapp,
         cpf, rg, passport, passport_expiry, visa_type, visa_expiry, nationality,
         address, address_city, address_state, address_country, address_zip,
@@ -117,7 +117,7 @@ router.post('/', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'g
         emergency_name, emergency_phone, emergency_relation,
         agent_notes, contract_start, contract_end)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-              ?, ?, ?, ?, ?,
+              ?, ?, ?, ?, ?, ?,
               ?, ?, ?, ?,
               ?, ?, ?, ?, ?, ?, ?,
               ?, ?, ?, ?, ?,
@@ -129,7 +129,7 @@ router.post('/', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'g
       age||null, height||null, bust||null, waist||null, hips||null, shoes||null, eyes||null, hair||null, city||null, bio||null,
       cover_image, cover_thumb, images, JSON.stringify(media),
       featured==='1'?1:0, active==='0'?0:1,
-      torax||null, terno||null, camisa||null, manequim||null, model_status||'In Town',
+      torax||null, terno||null, camisa||null, manequim||null, model_status||'In Town', home_order ? parseInt(home_order) : null,
       phone||null, phone2||null, email||null, whatsapp||null,
       cpf||null, rg||null, passport||null, passport_expiry||null, visa_type||null, visa_expiry||null, nationality||null,
       address||null, address_city||null, address_state||null, address_country||null, address_zip||null,
@@ -148,7 +148,7 @@ router.put('/:id', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 
     if (!model) return res.status(404).json({ error: 'Not found' });
 
     const { name, age, height, bust, waist, hips, shoes, eyes, hair, city, bio, featured, active, cover_url, ordered_images, slug: slugOverride,
-      torax, terno, camisa, manequim, model_status,
+      torax, terno, camisa, manequim, model_status, home_order,
       phone, phone2, email, whatsapp,
       cpf, rg, passport, passport_expiry, visa_type, visa_expiry, nationality,
       address, address_city, address_state, address_country, address_zip,
@@ -196,7 +196,7 @@ router.put('/:id', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 
     db.prepare(`
       UPDATE models SET name=?, slug=?, category=?, categories=?, age=?, height=?, bust=?, waist=?, hips=?, shoes=?,
         eyes=?, hair=?, city=?, bio=?, cover_image=?, cover_thumb=?, images=?, media=?, featured=?, active=?,
-        torax=?, terno=?, camisa=?, manequim=?, model_status=?,
+        torax=?, terno=?, camisa=?, manequim=?, model_status=?, home_order=?,
         phone=?, phone2=?, email=?, whatsapp=?,
         cpf=?, rg=?, passport=?, passport_expiry=?, visa_type=?, visa_expiry=?, nationality=?,
         address=?, address_city=?, address_state=?, address_country=?, address_zip=?,
@@ -215,6 +215,7 @@ router.put('/:id', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 
       active!==undefined?(active==='0'?0:1):model.active,
       torax??model.torax, terno??model.terno, camisa??model.camisa, manequim??model.manequim,
       model_status??model.model_status??'In Town',
+      home_order !== undefined ? (home_order === '' || home_order === null ? null : parseInt(home_order)) : model.home_order,
       phone??model.phone, phone2??model.phone2, email??model.email, whatsapp??model.whatsapp,
       cpf??model.cpf, rg??model.rg, passport??model.passport, passport_expiry??model.passport_expiry,
       visa_type??model.visa_type, visa_expiry??model.visa_expiry, nationality??model.nationality,

@@ -81,6 +81,9 @@ db.exec(`
  'categories TEXT DEFAULT \'[]\'', 'media TEXT DEFAULT \'[]\'',
  'torax TEXT', 'terno TEXT', 'camisa TEXT', 'manequim TEXT',
 
+ // Ordenação manual na home
+ 'home_order INTEGER DEFAULT NULL',
+
  // Status público (IN TOWN / INTRODUCING / país)
  "model_status TEXT DEFAULT 'In Town'",
 

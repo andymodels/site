@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const db = require('../db');
 
-const PUBLIC_FIELDS = 'id, name, slug, category, categories, age, height, bust, waist, hips, shoes, eyes, hair, city, bio, featured, active, cover_image, cover_thumb, images, media, model_status, torax, terno, camisa, manequim, instagram, tiktok, youtube';
+const PUBLIC_FIELDS = 'id, name, slug, category, categories, age, height, bust, waist, hips, shoes, eyes, hair, city, bio, featured, active, cover_image, cover_thumb, images, media, model_status, torax, terno, camisa, manequim, instagram, tiktok, youtube, home_order';
 
 router.get('/', (req, res) => {
   const { category, featured, limit } = req.query;
@@ -13,7 +13,9 @@ router.get('/', (req, res) => {
     params.push(category, `%"${category}"%`);
   }
   if (featured) { query += ' AND featured = 1'; }
-  query += ' ORDER BY name ASC';
+  query += featured
+    ? ' ORDER BY home_order ASC NULLS LAST, name ASC'
+    : ' ORDER BY name ASC';
   if (limit) { query += ' LIMIT ?'; params.push(parseInt(limit, 10)); }
 
   const rows = db.prepare(query).all(...params);
