@@ -185,7 +185,7 @@ router.put('/:id', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 
       age??model.age, height??model.height, bust??model.bust,
       waist??model.waist, hips??model.hips, shoes??model.shoes,
       eyes??model.eyes, hair??model.hair, city??model.city,
-      bio??model.bio, cover_image, cover_thumb, images, JSON.stringify(mediaItems),
+      bio !== undefined ? (bio || null) : model.bio, cover_image, cover_thumb, images, JSON.stringify(mediaItems),
       featured!==undefined?(featured==='1'?1:0):model.featured,
       active!==undefined?(active==='0'?0:1):model.active,
       torax??model.torax, terno??model.terno, camisa??model.camisa, manequim??model.manequim,

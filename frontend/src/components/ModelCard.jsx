@@ -18,9 +18,6 @@ export default function ModelCard({ model }) {
       <div className="mt-2 px-px pb-1">
         <p className="text-[11px] tracking-[0.12em] uppercase font-medium text-black leading-none">
           {model.name}
-          {model.city && (
-            <span className="font-normal text-gray-400"> · {model.city}</span>
-          )}
         </p>
         {model.model_status && (
           <p className="text-[9px] tracking-[0.15em] uppercase text-gray-400 mt-0.5">{model.model_status}</p>

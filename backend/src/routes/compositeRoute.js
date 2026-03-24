@@ -60,8 +60,8 @@ function drawPageFrame(doc, model, pageNum, totalPages) {
   }
 
   // model name — large, centered, dominant
-  doc.fontSize(20).fillColor('#111').font('Helvetica-Bold')
-    .text(model.name.toUpperCase(), MARGIN + 180, logoY + 4, {
+  doc.fontSize(32).fillColor('#111').font('Helvetica-Bold')
+    .text(model.name.toUpperCase(), MARGIN + 180, logoY, {
       width: W - (MARGIN + 180) * 2,
       align: 'center',
       lineBreak: false,
@@ -187,10 +187,9 @@ router.get('/:slug/polaroid.pdf', (req, res) => {
     doc.addPage();
     drawPageFrame(doc, model, idx + 1, urls.length);
 
-    // single photo centred — uses full width of both photo columns
-    const fullW = PHOTO_W * 2 + GAP;
-    const singleX = (PAGE_W - fullW) / 2;
-    drawPhotoCover(doc, urlToPath(url), singleX, PHOTO_AREA_TOP, fullW, PHOTO_H);
+    // polaroid: foto centrada com largura de uma coluna — idêntico ao composite de foto ímpar
+    const singleX = (PAGE_W - PHOTO_W) / 2;
+    drawPhotoCover(doc, urlToPath(url), singleX, PHOTO_AREA_TOP, PHOTO_W, PHOTO_H);
   });
 
   doc.end();

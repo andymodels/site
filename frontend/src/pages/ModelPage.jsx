@@ -372,8 +372,8 @@ export default function ModelPage() {
           {/* ── Sidebar ── */}
           <div className="lg:sticky lg:top-8 lg:self-start space-y-0">
             <h1 className="text-[13px] tracking-[0.18em] uppercase font-medium">{model.name}</h1>
-            {model.city && (
-              <p className="text-[10px] tracking-[0.14em] uppercase text-gray-400 mt-0.5 mb-6">{model.city}</p>
+            {model.model_status && (
+              <p className="text-[10px] tracking-[0.14em] uppercase text-gray-400 mt-0.5 mb-6">{model.model_status}</p>
             )}
 
             {/* Action buttons */}
@@ -403,13 +403,6 @@ export default function ModelPage() {
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {model.age && (
-              <div className="border-t border-gray-100 mt-5 pt-5 flex justify-between items-baseline">
-                <span className="text-[10px] tracking-[0.1em] uppercase text-gray-400">Age</span>
-                <span className="text-[10px] text-black font-light">{model.age}</span>
               </div>
             )}
 
