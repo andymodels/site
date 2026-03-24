@@ -33,7 +33,7 @@ router.post('/', async (req, res) => {
 
   try {
     await resend.emails.send({
-      from: 'Andy Models <contato@andymodels.com>',
+      from: 'Andy Models <msn@andymodels.com>',
       to: ['msn@andymodels.com'],
       subject: 'Novo contato pelo site',
       html: `
