@@ -36,3 +36,13 @@ img {
   display: block;
   max-width: 100%;
 }
+
+@keyframes soundbar {
+  0%, 100% { transform: scaleY(0.4); }
+  50%       { transform: scaleY(1);   }
+}
+
+.animate-soundbar {
+  animation: soundbar 0.8s ease-in-out infinite;
+  transform-origin: center;
+}
