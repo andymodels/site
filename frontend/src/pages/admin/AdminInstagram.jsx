@@ -98,7 +98,7 @@ export default function AdminInstagram() {
           <span className="text-[10px] font-light tracking-[0.3em] uppercase text-gray-400">Admin</span>
         </div>
         <div className="flex items-center gap-6">
-          <Link to="/admin"              className="text-xs tracking-widest uppercase text-gray-500 hover:text-black transition-colors">Dashboard</Link>
+          <Link to="/admin/dashboard"    className="text-xs tracking-widest uppercase text-gray-500 hover:text-black transition-colors">Dashboard</Link>
           <Link to="/admin/radio"        className="text-xs tracking-widest uppercase text-gray-500 hover:text-black transition-colors">Rádio</Link>
           <Link to="/admin/instagram"    className="text-xs tracking-widest uppercase text-black border-b border-black pb-px">Instagram</Link>
           <Link to="/admin/applications" className="text-xs tracking-widest uppercase text-gray-500 hover:text-black transition-colors">Inscrições</Link>
