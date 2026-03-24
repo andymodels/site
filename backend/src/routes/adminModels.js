@@ -463,4 +463,111 @@ router.post('/:id/media/url-direct', (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ─── Measurement bilingual parser ────────────────────────────────────────────
+// Handles format: "altura 187 height | tórax 97 chest | cabelos CASTANHOS hair BROWN | ..."
+// Extracts the English value for each known field.
+function parseBilingualMeasurements(text) {
+  // EN label → DB column name
+  const EN_LABELS = {
+    height: 'height',
+    chest:  'torax',
+    bust:   'bust',
+    waist:  'waist',
+    hips:   'hips',
+    size:   'manequim',
+    shoes:  'shoes',
+    hair:   'hair',
+    eyes:   'eyes',
+    suit:   'terno',
+    shirt:  'camisa',
+  };
+
+  const result = {};
+  const segments = text.split('|').map(s => s.trim()).filter(Boolean);
+
+  for (const seg of segments) {
+    for (const [label, field] of Object.entries(EN_LABELS)) {
+      // Word-boundary check for the EN label
+      const re = new RegExp(`(?<![\\w])${label}(?![\\w])`, 'i');
+      const match = re.exec(seg);
+      if (!match) continue;
+
+      const afterLabel = seg.slice(match.index + label.length).trim();
+      const numInSeg   = seg.match(/\d+/);
+
+      if (numInSeg) {
+        // Numeric field: value is the number found anywhere in the segment
+        result[field] = numInSeg[0];
+      } else if (afterLabel) {
+        // Color/text field: value is the word(s) after the EN label, already in EN
+        result[field] = afterLabel.toUpperCase();
+      }
+      break;
+    }
+  }
+
+  return result;
+}
+
+// ─── POST /:id/scrape-measurements — fetch model page and extract measurements ─
+router.post('/:id/scrape-measurements', async (req, res) => {
+  try {
+    const model = db.prepare('SELECT * FROM models WHERE id = ?').get(req.params.id);
+    if (!model) return res.status(404).json({ error: 'Not found' });
+
+    const { page_url } = req.body;
+    if (!page_url) return res.status(400).json({ error: 'page_url required' });
+
+    const html = await new Promise((resolve, reject) => {
+      const client = page_url.startsWith('https') ? https : http;
+      client.get(page_url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' },
+      }, (r) => {
+        if (r.statusCode >= 300 && r.statusCode < 400 && r.headers.location)
+          return downloadBuffer(r.headers.location).then(b => resolve(b.toString())).catch(reject);
+        if (r.statusCode !== 200) return reject(new Error(`HTTP ${r.statusCode}`));
+        const chunks = [];
+        r.on('data', c => chunks.push(c));
+        r.on('end', () => resolve(Buffer.concat(chunks).toString()));
+        r.on('error', reject);
+      }).on('error', reject);
+    });
+
+    // Strip HTML tags to get plain text, then look for the measurement block
+    const plain = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+
+    // The measurement block contains known EN labels separated by | or newlines
+    // Try to find a continuous segment with at least 2 known EN labels
+    const EN_PATTERN = /\b(height|chest|bust|waist|hips|size|shoes|hair|eyes|suit|shirt)\b/gi;
+    const allMatches = [...plain.matchAll(EN_PATTERN)];
+    if (!allMatches.length) {
+      return res.status(422).json({ error: 'No measurement data found on page.' });
+    }
+
+    // Find the substring that spans from the first to last EN label match (with context)
+    const first = allMatches[0].index;
+    const last  = allMatches[allMatches.length - 1].index + 10;
+    const block = plain.slice(Math.max(0, first - 80), last + 80);
+
+    const parsed = parseBilingualMeasurements(block);
+
+    if (!Object.keys(parsed).length) {
+      return res.status(422).json({ error: 'Could not parse measurements from page.', block });
+    }
+
+    // Build SET clause dynamically — only update fields that were successfully parsed
+    const allowed = ['height', 'bust', 'waist', 'hips', 'shoes', 'hair', 'eyes', 'torax', 'terno', 'camisa', 'manequim'];
+    const updates = Object.entries(parsed).filter(([k]) => allowed.includes(k));
+    if (!updates.length) return res.status(422).json({ error: 'No mappable fields found.', parsed });
+
+    const setClauses = updates.map(([k]) => `${k} = ?`).join(', ');
+    const values     = updates.map(([, v]) => v);
+
+    db.prepare(`UPDATE models SET ${setClauses} WHERE id = ?`).run(...values, req.params.id);
+
+    const updated = db.prepare('SELECT * FROM models WHERE id = ?').get(req.params.id);
+    res.json({ ok: true, parsed, updated: serializeModel(updated) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports = router;
