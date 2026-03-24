@@ -90,8 +90,8 @@ router.put('/:id', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 
     const model = db.prepare('SELECT * FROM models WHERE id = ?').get(req.params.id);
     if (!model) return res.status(404).json({ error: 'Not found' });
 
-    const { name, age, height, bust, waist, hips, shoes, eyes, hair, city, bio, featured, active, cover_url, ordered_images } = req.body;
-    const slug = name ? slugify(name) : model.slug;
+    const { name, age, height, bust, waist, hips, shoes, eyes, hair, city, bio, featured, active, cover_url, ordered_images, slug: slugOverride } = req.body;
+    const slug = slugOverride ? slugOverride : (name ? slugify(name) : model.slug);
 
     const categories = parseField(req.body.categories, JSON.parse(model.categories || '["women"]'));
     const category   = categories[0] || model.category;
