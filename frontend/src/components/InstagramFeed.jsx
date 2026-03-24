@@ -1,16 +1,30 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+
+const EMBED_SCRIPT_ID = 'instagram-embed-script';
+const EMBED_SCRIPT_SRC = 'https://www.instagram.com/embed.js';
+
+function loadEmbedScript(onReady) {
+  if (window.instgrm) { onReady(); return; }
+  let script = document.getElementById(EMBED_SCRIPT_ID);
+  if (!script) {
+    script = document.createElement('script');
+    script.id = EMBED_SCRIPT_ID;
+    script.src = EMBED_SCRIPT_SRC;
+    script.async = true;
+    document.body.appendChild(script);
+  }
+  script.addEventListener('load', onReady, { once: true });
+}
+
+function processEmbeds() {
+  if (window.instgrm?.Embeds?.process) {
+    window.instgrm.Embeds.process();
+  }
+}
 
 function EmbedPost({ url }) {
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (window.instgrm) {
-      window.instgrm.Embeds.process();
-    }
-  }, []);
-
   return (
-    <div ref={ref} className="instagram-embed-wrapper overflow-hidden bg-white flex items-center justify-center" style={{ minHeight: 220 }}>
+    <div className="instagram-embed-wrapper overflow-hidden bg-white flex items-start justify-center" style={{ minHeight: 220 }}>
       <blockquote
         className="instagram-media"
         data-instgrm-captioned
@@ -38,26 +52,51 @@ export default function InstagramFeed() {
   useEffect(() => {
     fetch('/api/instagram')
       .then(r => r.json())
-      .then(data => { setPosts(Array.isArray(data) ? data : []); })
+      .then(data => setPosts(Array.isArray(data) ? data : []))
       .catch(() => setPosts([]))
       .finally(() => setLoading(false));
   }, []);
 
-  // Load Instagram embed script once
+  // After posts render, ensure embed script is loaded then call process()
   useEffect(() => {
-    if (document.getElementById('instagram-embed-script')) {
-      if (window.instgrm) window.instgrm.Embeds.process();
-      return;
-    }
-    const s = document.createElement('script');
-    s.id = 'instagram-embed-script';
-    s.src = 'https://www.instagram.com/embed.js';
-    s.async = true;
-    s.defer = true;
-    document.body.appendChild(s);
+    if (posts.length === 0) return;
+    // Small tick so blockquotes are in the DOM before process() runs
+    const run = () => setTimeout(processEmbeds, 100);
+    loadEmbedScript(run);
   }, [posts]);
 
-  if (!loading && posts.length === 0) return null;
+  if (!loading && posts.length === 0) {
+    return (
+      <section className="border-t border-gray-100 pt-12 mb-16">
+        <div className="flex items-baseline justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-black">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+              <circle cx="12" cy="12" r="4"/>
+              <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+            </svg>
+            <h2 className="text-[11px] tracking-[0.4em] uppercase font-light">Instagram</h2>
+          </div>
+          <a
+            href="https://www.instagram.com/andymodels"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] tracking-[0.14em] uppercase text-gray-400 hover:text-black transition-colors"
+          >
+            @andymodels
+          </a>
+        </div>
+        <a
+          href="https://www.instagram.com/andymodels"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[11px] tracking-[0.2em] uppercase text-gray-400 hover:text-black transition-colors border-b border-gray-200 pb-px"
+        >
+          Ver no Instagram →
+        </a>
+      </section>
+    );
+  }
 
   return (
     <section className="border-t border-gray-100 pt-12 mb-16">
