@@ -3,13 +3,16 @@ const multer    = require('multer');
 const nodemailer = require('nodemailer');
 const path      = require('path');
 const fs        = require('fs');
+const sharp     = require('sharp');
 const db        = require('../db');
 const config    = require('../config');
 const adminAuth = require('../middleware/auth');
 
-// ── Diretório temp de fotos ────────────────────────────────────────────────
-const TEMP_DIR = path.join(config.uploadsDir, 'temp');
-fs.mkdirSync(TEMP_DIR, { recursive: true });
+// ── Diretórios ─────────────────────────────────────────────────────────────
+const TEMP_DIR  = path.join(config.uploadsDir, 'temp');
+const THUMB_DIR = path.join(config.uploadsDir, 'applicants');
+fs.mkdirSync(TEMP_DIR,  { recursive: true });
+fs.mkdirSync(THUMB_DIR, { recursive: true });
 
 // ── Multer — memória (processamos aqui antes de salvar) ────────────────────
 const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'application/pdf'];
@@ -123,9 +126,23 @@ router.post('/', upload.fields([{ name: 'photos', maxCount: 5 }, { name: 'pdf', 
   const oversized = photoFiles.find(f => f.size > 5 * 1024 * 1024);
   if (oversized) return res.status(400).json({ error: 'Cada foto deve ter no máximo 5MB.' });
 
-  // 1. Salvar fotos em /uploads/temp
-  const savedPhotos = [];
+  // 1. Gerar thumbnail da primeira foto (referência visual permanente)
   const now = Date.now();
+  let thumbUrl = null;
+  try {
+    const thumbName = `app_${now}_thumb.jpg`;
+    const thumbPath = path.join(THUMB_DIR, thumbName);
+    await sharp(photoFiles[0].buffer)
+      .resize({ height: 300, withoutEnlargement: true })
+      .jpeg({ quality: 80, progressive: true })
+      .toFile(thumbPath);
+    thumbUrl = `/uploads/applicants/${thumbName}`;
+  } catch (e) {
+    console.error('[thumb] Erro ao gerar thumbnail:', e.message);
+  }
+
+  // 2. Salvar todas as fotos originais em /uploads/temp (temporário — apagadas após 30 dias)
+  const savedPhotos = [];
   for (let i = 0; i < photoFiles.length; i++) {
     const f    = photoFiles[i];
     const ext  = f.mimetype === 'image/png' ? 'png' : 'jpg';
@@ -135,26 +152,29 @@ router.post('/', upload.fields([{ name: 'photos', maxCount: 5 }, { name: 'pdf', 
     savedPhotos.push(`/uploads/temp/${fname}`);
   }
 
-  // Salvar PDF se enviado
+  // Salvar PDF se enviado (também temporário)
   let savedPdf = null;
   if (pdfFiles.length > 0) {
-    const pf    = pdfFiles[0];
     const pfname = `app_${now}_material.pdf`;
-    fs.writeFileSync(path.join(TEMP_DIR, pfname), pf.buffer);
+    fs.writeFileSync(path.join(TEMP_DIR, pfname), pdfFiles[0].buffer);
     savedPdf = `/uploads/temp/${pfname}`;
   }
 
-  // 2. Salvar dados no banco
+  // 3. Salvar dados no banco (thumb_url é permanente; photos são temporárias)
+  // Garante coluna thumb_url existe (migração lazy)
+  try { db.prepare('ALTER TABLE applications ADD COLUMN thumb_url TEXT').run(); } catch {}
+
   const result = db.prepare(`
     INSERT INTO applications
-      (name, email, phone, age, height, city, state, instagram, category, photos, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')
+      (name, email, phone, age, height, city, state, instagram, category, photos, thumb_url, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')
   `).run(
     name.trim(), email.trim(),
     phone || null, age ? parseInt(age) : null,
     height || null, city || null, state || null,
-    instagram || null, category || 'women',
+    instagram || null, category || null,
     JSON.stringify(savedPhotos),
+    thumbUrl,
   );
 
   // 3. Enviar e-mail (com retry em caso de falha)
@@ -223,5 +243,39 @@ router.delete('/admin/:id', adminAuth, (req, res) => {
   db.prepare('DELETE FROM applications WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
 });
+
+// ── Limpeza automática: após 30 dias apaga originais, mantém só thumb ─────
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+function runCleanup() {
+  const cutoff = new Date(Date.now() - THIRTY_DAYS_MS).toISOString();
+  const old = db.prepare(`
+    SELECT id, photos, thumb_url FROM applications
+    WHERE created_at < ? AND photos != '[]' AND photos IS NOT NULL
+  `).all(cutoff);
+
+  let cleaned = 0;
+  for (const row of old) {
+    try {
+      const files = JSON.parse(row.photos || '[]');
+      for (const p of files) {
+        const abs = path.join(__dirname, '../../../', p);
+        if (fs.existsSync(abs)) { fs.unlinkSync(abs); cleaned++; }
+      }
+      // Apagar PDF temp se existir
+      const pdfPath = path.join(TEMP_DIR, `app_${path.basename(files[0] || '').replace(/app_(\d+)_.*/, '$1')}_material.pdf`);
+      if (fs.existsSync(pdfPath)) { fs.unlinkSync(pdfPath); cleaned++; }
+    } catch {}
+    // Zera lista de fotos no banco (thumb_url permanece)
+    db.prepare('UPDATE applications SET photos=? WHERE id=?').run('[]', row.id);
+  }
+  if (old.length > 0) {
+    console.log(`[cleanup] ${old.length} inscrição(ões) limpas, ${cleaned} arquivo(s) removidos.`);
+  }
+}
+
+// Roda ao iniciar e depois a cada 6 horas
+runCleanup();
+setInterval(runCleanup, 6 * 60 * 60 * 1000);
 
 module.exports = router;
