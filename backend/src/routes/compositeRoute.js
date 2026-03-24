@@ -102,7 +102,7 @@ function drawPageFrame(doc, model, pageNum, totalPages) {
     .lineWidth(0.4).strokeColor('#ccc').stroke();
 }
 
-// cover-crop: fill bounding box, clip to edges — no distortion, no whitespace
+// contain: imagem inteira visível, sem corte, centralizada no box
 function drawPhotoCover(doc, localPath, x, y, w, h) {
   doc.rect(x, y, w, h).fillColor('#f5f5f5').fill();
 
@@ -112,14 +112,11 @@ function drawPhotoCover(doc, localPath, x, y, w, h) {
   }
 
   try {
-    doc.save();
-    doc.rect(x, y, w, h).clip();
     doc.image(localPath, x, y, {
-      cover: [w, h],
+      fit: [w, h],
       align: 'center',
-      valign: 'top',
+      valign: 'center',
     });
-    doc.restore();
   } catch {
     doc.rect(x, y, w, h).lineWidth(0.3).strokeColor('#e0e0e0').stroke();
   }
