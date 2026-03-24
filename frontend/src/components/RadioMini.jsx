@@ -1,8 +1,11 @@
 import { useRadio } from '../context/RadioContext';
+import { useLocation } from 'react-router-dom';
 
 export default function RadioMini() {
   const radio = useRadio();
+  const { pathname } = useLocation();
   if (!radio || !radio.tracks.length) return null;
+  if (pathname.startsWith('/admin')) return null;
 
   const { playing, togglePlay } = radio;
 
