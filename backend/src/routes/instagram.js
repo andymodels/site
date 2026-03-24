@@ -78,7 +78,7 @@ function downloadFile(url, destPath, timeoutMs = 10000) {
 async function extractAndDownload(postUrl) {
   const token = process.env.INSTAGRAM_TOKEN;
 
-  // ── Tenta oEmbed API (confiável, usa token do Instagram) ─────────────────
+  // ── 1. oEmbed API via token ───────────────────────────────────────────────
   if (token) {
     try {
       const oembedUrl = `https://graph.facebook.com/v1.0/instagram_oembed?url=${encodeURIComponent(postUrl)}&fields=thumbnail_url&access_token=${token}`;
@@ -86,20 +86,23 @@ async function extractAndDownload(postUrl) {
       const data = await fetchJSON(oembedUrl);
       if (data.thumbnail_url) {
         console.log('[instagram] thumbnail_url obtido via oEmbed');
-        const ext   = 'jpg';
-        const fname = `ig_${Date.now()}.${ext}`;
+        const fname = `ig_${Date.now()}.jpg`;
         const fpath = path.join(IG_DIR, fname);
-        await downloadFile(data.thumbnail_url, fpath);
-        console.log(`[instagram] imagem salva: ${fname}`);
-        return { image_url: `${IG_URL_BASE}/${fname}`, local_file: fname, blocked: false };
+        try {
+          await downloadFile(data.thumbnail_url, fpath);
+          console.log(`[instagram] imagem salva: ${fname}`);
+          return { image_url: `${IG_URL_BASE}/${fname}`, local_file: fname, suggested: null };
+        } catch {
+          // download falhou mas temos a URL — retorna como sugestão
+          return { image_url: null, local_file: null, suggested: data.thumbnail_url };
+        }
       }
     } catch (e) {
-      console.warn(`[instagram] oEmbed falhou: ${e.message} — tentando og:image`);
+      console.warn(`[instagram] oEmbed falhou: ${e.message}`);
     }
   }
 
-  // ── Fallback: scraping og:image ──────────────────────────────────────────
-  console.log('[instagram] tentando og:image scraping...');
+  // ── 2. Fallback: scraping og:image ────────────────────────────────────────
   return scrapeOgImage(postUrl);
 }
 
@@ -107,12 +110,9 @@ function scrapeOgImage(postUrl, timeoutMs = 5000) {
   return new Promise((resolve) => {
     let settled = false;
     const done = (v) => { if (!settled) { settled = true; resolve(v); } };
-    const empty = { image_url: null, local_file: null, blocked: false };
+    const empty = { image_url: null, local_file: null, suggested: null };
 
-    const timer = setTimeout(() => {
-      console.warn('[instagram] scraping timeout');
-      req.destroy(); done({ ...empty, blocked: true });
-    }, timeoutMs);
+    const timer = setTimeout(() => { req.destroy(); done(empty); }, timeoutMs);
 
     const req = https.get(postUrl, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)', 'Accept-Language': 'en' },
@@ -123,22 +123,23 @@ function scrapeOgImage(postUrl, timeoutMs = 5000) {
         clearTimeout(timer);
         const m = body.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
                || body.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-        if (!m) { console.warn('[instagram] og:image não encontrado'); return done({ ...empty, blocked: !body }); }
+        if (!m) return done(empty);
+
         const ogImage = m[1].replace(/&amp;/g, '&');
         const ext   = ogImage.match(/\.(jpg|jpeg|png|webp)/i)?.[1] || 'jpg';
         const fname = `ig_${Date.now()}.${ext}`;
         const fpath = path.join(IG_DIR, fname);
         try {
           await downloadFile(ogImage, fpath);
-          done({ image_url: `${IG_URL_BASE}/${fname}`, local_file: fname, blocked: false });
-        } catch (e) {
-          console.error(`[instagram] download falhou: ${e.message}`);
+          done({ image_url: `${IG_URL_BASE}/${fname}`, local_file: fname, suggested: null });
+        } catch {
+          // não conseguiu baixar, mas retorna a URL como sugestão
           try { fs.unlinkSync(fpath); } catch {}
-          done(empty);
+          done({ image_url: null, local_file: null, suggested: ogImage });
         }
       });
     });
-    req.on('error', () => { clearTimeout(timer); done({ ...empty, blocked: true }); });
+    req.on('error', () => { clearTimeout(timer); done(empty); });
   });
 }
 
@@ -185,15 +186,19 @@ router.post('/', adminAuth, async (req, res) => {
   // Tenta extração automática; se falhar, salva mesmo assim
   let image_url = manualImage || null;
   let local_file = null;
-  let warning = null;
+  let warning    = null;
+  let suggested  = null;
 
   if (!manualImage) {
     try {
       const result = await extractAndDownload(clean);
       image_url  = result.image_url;
       local_file = result.local_file;
-      if (result.blocked || !result.image_url) {
-        warning = 'Post salvo sem imagem (Instagram bloqueou a extração automática). Adicione a URL da imagem manualmente se necessário.';
+      suggested  = result.suggested;
+      if (!result.image_url) {
+        warning = suggested
+          ? 'Imagem não pôde ser salva localmente. URL sugerida preenchida automaticamente — confirme para salvar.'
+          : 'Post salvo sem imagem. Adicione a URL manualmente.';
       }
     } catch (e) {
       console.error('[instagram] erro inesperado:', e.message);
@@ -205,7 +210,7 @@ router.post('/', adminAuth, async (req, res) => {
     const row = db.prepare(
       'INSERT INTO instagram_embeds (url, image_url, local_file, position) VALUES (?, ?, ?, (SELECT COALESCE(MAX(position),0)+1 FROM instagram_embeds))'
     ).run(clean, image_url, local_file);
-    res.json({ id: row.lastInsertRowid, url: clean, image_url, warning });
+    res.json({ id: row.lastInsertRowid, url: clean, image_url, suggested, warning });
   } catch (e) {
     deleteLocalFile(local_file);
     if (e.message.includes('UNIQUE')) return res.status(409).json({ error: 'Post já adicionado.' });

@@ -39,6 +39,10 @@ export default function AdminInstagram() {
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Erro ao salvar.');
       if (d.warning) setWarning(d.warning);
+      // Pré-preenche campo de imagem se não foi salva localmente mas há sugestão
+      if (!d.image_url && d.suggested) {
+        setEditImg(p => ({ ...p, [d.id]: d.suggested }));
+      }
       setUrl('');
       await load();
     } catch (err) {
