@@ -10,7 +10,7 @@ const ALLOWED_TYPES = [...ALLOWED_IMAGE, 'application/pdf'];
 
 const EMPTY = {
   name: '', email: '', phone: '', age: '',
-  height: '', city: '', state: '', instagram: '', category: 'women',
+  height: '', city: '', state: '', instagram: '',
 };
 
 function InfoBlock({ title, children }) {
@@ -105,10 +105,19 @@ export default function InscrevaPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setFormError('');
+
     if (photos.length < MIN_PHOTOS) {
       setPhotoError(`Envie pelo menos ${MIN_PHOTOS} fotos para continuar.`);
       return;
     }
+
+    // Validar URL do Instagram se preenchido
+    const ig = form.instagram.trim();
+    if (ig && !ig.match(/^https?:\/\/(www\.)?instagram\.com\/.+/i)) {
+      setFormError('Instagram: informe a URL completa. Ex: https://instagram.com/seu.perfil');
+      return;
+    }
+
     setLoading(true);
     try {
       const fd = new FormData();
@@ -218,7 +227,7 @@ export default function InscrevaPage() {
                 </div>
                 <div>
                   <label className={labelClass}>{T.fields.height}</label>
-                  <input type="text" className={inputClass} placeholder={T.fields.heightPh} {...field('height')} />
+                  <input type="text" required className={inputClass} placeholder={T.fields.heightPh} {...field('height')} />
                 </div>
                 <div>
                   <label className={labelClass}>{T.fields.city}</label>
@@ -234,19 +243,11 @@ export default function InscrevaPage() {
                 </div>
                 <div>
                   <label className={labelClass}>{T.fields.instagram}</label>
-                  <input type="text" className={inputClass} placeholder={T.fields.instagramPh} {...field('instagram')} />
+                  <input type="url" className={inputClass} placeholder={T.fields.instagramPh} {...field('instagram')} />
                 </div>
                 <div className="sm:col-span-2">
                   <label className={labelClass}>{T.fields.email}</label>
                   <input type="email" required className={inputClass} placeholder={T.fields.emailPh} {...field('email')} />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className={labelClass}>{T.fields.area}</label>
-                  <select className={inputClass} value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))}>
-                    <option value="women">{T.fields.areaOpts[0]}</option>
-                    <option value="men">{T.fields.areaOpts[1]}</option>
-                    <option value="creators">{T.fields.areaOpts[2]}</option>
-                  </select>
                 </div>
               </div>
 
