@@ -28,7 +28,7 @@ function IconWhatsApp() {
 }
 
 export default function ContactPage() {
-  const [form, setForm]         = useState({ name:'', email:'', phone:'', instagram:'', message:'' });
+  const [form, setForm]         = useState({ name:'', email:'', phone:'', instagram:'', message:'', website:'' });
   const [status, setStatus]     = useState('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -52,7 +52,7 @@ export default function ContactPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Erro ao enviar.');
       setStatus('success');
-      setForm({ name:'', email:'', phone:'', instagram:'', message:'' });
+      setForm({ name:'', email:'', phone:'', instagram:'', message:'', website:'' });
     } catch (err) {
       setErrorMsg(err.message);
       setStatus('error');
@@ -119,6 +119,9 @@ export default function ContactPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-7">
+                <div style={{display:'none'}} aria-hidden="true">
+                  <input type="text" name="website" tabIndex={-1} autoComplete="off" {...field('website')} />
+                </div>
                 <div>
                   <label className={labelClass}>Nome</label>
                   <input type="text" required placeholder="Seu nome"

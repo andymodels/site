@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const db     = require('../db');
 const { Resend } = require('resend');
+const { getIp, checkRateLimit, sanitize, isHoneypot } = require('../utils/spam');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -18,18 +19,35 @@ db.exec(`
 `);
 
 router.post('/', async (req, res) => {
-  const { name, email, phone, instagram, message } = req.body;
+  const ip = getIp(req);
 
-  if (!name?.trim())    return res.status(400).json({ error: 'Nome obrigatório.' });
-  if (!email?.trim())   return res.status(400).json({ error: 'Email obrigatório.' });
+  if (isHoneypot(req.body)) {
+    return res.json({ ok: true });
+  }
+
+  if (!checkRateLimit(ip)) {
+    return res.json({ ok: true });
+  }
+
+  const name      = sanitize(req.body.name);
+  const email     = sanitize(req.body.email);
+  const phone     = sanitize(req.body.phone);
+  const instagram = sanitize(req.body.instagram);
+  const message   = sanitize(req.body.message);
+
+  if (!name || name.length < 3)
+    return res.status(400).json({ error: 'Nome deve ter pelo menos 3 caracteres.' });
+  if (!email)
+    return res.status(400).json({ error: 'Email obrigatório.' });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return res.status(400).json({ error: 'Email inválido.' });
-  if (!message?.trim()) return res.status(400).json({ error: 'Mensagem obrigatória.' });
+  if (!message || message.length < 10)
+    return res.status(400).json({ error: 'Mensagem deve ter pelo menos 10 caracteres.' });
 
   db.prepare(`
     INSERT INTO contact_messages (name, email, phone, instagram, message)
     VALUES (?, ?, ?, ?, ?)
-  `).run(name.trim(), email.trim(), phone?.trim() || null, instagram?.trim() || null, message.trim());
+  `).run(name, email, phone || null, instagram || null, message);
 
   try {
     await resend.emails.send({
@@ -40,13 +58,13 @@ router.post('/', async (req, res) => {
         <div style="font-family: Arial; max-width: 600px;">
           <h2>📩 Novo contato - Andy Models</h2>
           <hr/>
-          <p><strong>Nome:</strong> ${name.trim()}</p>
-          <p><strong>Email:</strong> ${email.trim()}</p>
-          <p><strong>Telefone:</strong> ${phone?.trim() || '—'}</p>
-          <p><strong>Instagram:</strong> ${instagram?.trim() || '—'}</p>
+          <p><strong>Nome:</strong> ${name}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Telefone:</strong> ${phone || '—'}</p>
+          <p><strong>Instagram:</strong> ${instagram || '—'}</p>
           <p><strong>Mensagem:</strong></p>
           <p style="background:#f5f5f5;padding:10px;border-radius:6px;white-space:pre-wrap;">
-            ${message.trim()}
+            ${message}
           </p>
         </div>
       `

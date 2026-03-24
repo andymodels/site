@@ -11,6 +11,7 @@ const ALLOWED_TYPES = [...ALLOWED_IMAGE, 'application/pdf'];
 const EMPTY = {
   name: '', email: '', phone: '', age: '',
   height: '', city: '', state: '', instagram: '',
+  website: '',
 };
 
 function InfoBlock({ title, children }) {
@@ -121,7 +122,8 @@ export default function InscrevaPage() {
     setLoading(true);
     try {
       const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => { if (v) fd.append(k, v); });
+      Object.entries(form).forEach(([k, v]) => { if (k !== 'website' && v) fd.append(k, v); });
+      fd.append('website', form.website);
       photos.forEach(p => fd.append('photos', p.file));
       if (pdfFile) fd.append('pdf', pdfFile);
       const res = await fetch('/api/applications', { method: 'POST', body: fd });
@@ -215,6 +217,9 @@ export default function InscrevaPage() {
 
           <div>
             <form onSubmit={handleSubmit} className="space-y-5">
+              <div style={{display:'none'}} aria-hidden="true">
+                <input type="text" name="website" tabIndex={-1} autoComplete="off" {...field('website')} />
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="sm:col-span-2">

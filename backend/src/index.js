@@ -25,6 +25,7 @@ function safeUploadsDir(preferred) {
 const uploadsDir = safeUploadsDir(config.uploadsDir);
 
 const app = express();
+app.set('trust proxy', true);
 
 const allowedOrigins = process.env.FRONTEND_URL
   ? process.env.FRONTEND_URL.split(',').map(s => s.trim())

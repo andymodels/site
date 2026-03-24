@@ -7,6 +7,7 @@ const sharp     = require('sharp');
 const db        = require('../db');
 const config    = require('../config');
 const adminAuth = require('../middleware/auth');
+const { getIp, checkRateLimit, sanitize, isHoneypot } = require('../utils/spam');
 
 // ── Diretórios ─────────────────────────────────────────────────────────────
 const TEMP_DIR  = path.join(config.uploadsDir, 'temp');
@@ -109,10 +110,29 @@ try { db.prepare('ALTER TABLE applications ADD COLUMN thumb_url TEXT').run(); } 
 
 // ── POST /api/applications ─────────────────────────────────────────────────
 router.post('/', upload.fields([{ name: 'photos', maxCount: 5 }, { name: 'pdf', maxCount: 1 }]), async (req, res) => {
-  const { name, email, phone, age, height, city, state, instagram, category } = req.body;
+  const ip = getIp(req);
 
-  if (!name?.trim()) return res.status(400).json({ error: 'Nome é obrigatório.' });
-  if (!email?.trim()) return res.status(400).json({ error: 'E-mail é obrigatório.' });
+  if (isHoneypot(req.body)) {
+    return res.status(201).json({ ok: true, id: 0, mailSent: false });
+  }
+
+  if (!checkRateLimit(ip)) {
+    return res.status(201).json({ ok: true, id: 0, mailSent: false });
+  }
+
+  const name      = sanitize(req.body.name);
+  const email     = sanitize(req.body.email);
+  const phone     = sanitize(req.body.phone);
+  const age       = req.body.age;
+  const height    = sanitize(req.body.height);
+  const city      = sanitize(req.body.city);
+  const state     = sanitize(req.body.state);
+  const instagram = sanitize(req.body.instagram);
+  const category  = sanitize(req.body.category);
+
+  if (!name || name.length < 3) return res.status(400).json({ error: 'Nome deve ter pelo menos 3 caracteres.' });
+  if (!email) return res.status(400).json({ error: 'E-mail é obrigatório.' });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'E-mail inválido.' });
 
   const photoFiles = req.files?.photos || [];
   const pdfFiles   = req.files?.pdf || [];
@@ -169,7 +189,7 @@ router.post('/', upload.fields([{ name: 'photos', maxCount: 5 }, { name: 'pdf', 
       (name, email, phone, age, height, city, state, instagram, category, photos, thumb_url, status)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')
   `).run(
-    name.trim(), email.trim(),
+    name, email,
     phone || null, age ? parseInt(age) : null,
     height || null, city || null, state || null,
     instagram || null, category || null,
@@ -178,7 +198,7 @@ router.post('/', upload.fields([{ name: 'photos', maxCount: 5 }, { name: 'pdf', 
   );
 
   // 3. Enviar e-mail (com retry em caso de falha)
-  const appData = { name: name.trim(), email: email.trim(), phone, age, height, city, state, instagram, category };
+  const appData = { name, email, phone, age, height, city, state, instagram, category };
   let mailResult;
   try {
     mailResult = await sendApplicationEmail(appData, photoFiles, savedPdf ? pdfFiles[0] : null);
