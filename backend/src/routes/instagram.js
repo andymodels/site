@@ -93,8 +93,9 @@ async function extractAndDownload(postUrl) {
           console.log(`[instagram] imagem salva: ${fname}`);
           return { image_url: `${IG_URL_BASE}/${fname}`, local_file: fname, suggested: null };
         } catch {
-          // download falhou mas temos a URL — retorna como sugestão
-          return { image_url: null, local_file: null, suggested: data.thumbnail_url };
+          // download falhou — valida se a URL em si é uma imagem direta
+          const valid = await isImageUrl(data.thumbnail_url);
+          return { image_url: null, local_file: null, suggested: valid ? data.thumbnail_url : null };
         }
       }
     } catch (e) {
@@ -104,6 +105,23 @@ async function extractAndDownload(postUrl) {
 
   // ── 2. Fallback: scraping og:image ────────────────────────────────────────
   return scrapeOgImage(postUrl);
+}
+
+// Valida se URL retorna content-type image/*
+function isImageUrl(url, timeoutMs = 5000) {
+  return new Promise((resolve) => {
+    const lib = url.startsWith('https') ? https : http;
+    let settled = false;
+    const done = (v) => { if (!settled) { settled = true; resolve(v); } };
+    const timer = setTimeout(() => { try { req.destroy(); } catch {} done(false); }, timeoutMs);
+    const req = lib.request(url, { method: 'HEAD' }, (res) => {
+      clearTimeout(timer);
+      const ct = res.headers['content-type'] || '';
+      done(ct.startsWith('image/'));
+    });
+    req.on('error', () => { clearTimeout(timer); done(false); });
+    req.end();
+  });
 }
 
 function scrapeOgImage(postUrl, timeoutMs = 5000) {
@@ -133,9 +151,11 @@ function scrapeOgImage(postUrl, timeoutMs = 5000) {
           await downloadFile(ogImage, fpath);
           done({ image_url: `${IG_URL_BASE}/${fname}`, local_file: fname, suggested: null });
         } catch {
-          // não conseguiu baixar, mas retorna a URL como sugestão
           try { fs.unlinkSync(fpath); } catch {}
-          done({ image_url: null, local_file: null, suggested: ogImage });
+          // valida se a URL original é imagem direta antes de sugerir
+          isImageUrl(ogImage).then(valid => {
+            done({ image_url: null, local_file: null, suggested: valid ? ogImage : null });
+          });
         }
       });
     });
