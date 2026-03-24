@@ -246,7 +246,10 @@ router.post('/', adminAuth, upload.single('image'), async (req, res) => {
   try {
     const row = db.prepare(
       'INSERT INTO instagram_embeds (url, image_url, local_file, position) VALUES (?, ?, ?, (SELECT COALESCE(MAX(position),0)+1 FROM instagram_embeds))'
-    ).run(clean, image_url, local_file);
+    ).run(clean, image_url, local_file);  // posição menor = aparece primeiro
+    // novos posts ficam no topo: posição = mínimo atual - 1
+    db.prepare('UPDATE instagram_embeds SET position=(SELECT COALESCE(MIN(position),0)-1 FROM instagram_embeds WHERE id!=?) WHERE id=?')
+      .run(row.lastInsertRowid, row.lastInsertRowid);
     res.json({ id: row.lastInsertRowid, url: clean, image_url });
   } catch (e) {
     deleteLocalFile(local_file);

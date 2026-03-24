@@ -98,7 +98,7 @@ export default function AdminInstagram() {
           <span className="text-[10px] font-light tracking-[0.3em] uppercase text-gray-400">Admin</span>
         </div>
         <div className="flex items-center gap-6">
-          <Link to="/admin"              className="text-xs tracking-widest uppercase text-gray-500 hover:text-black transition-colors">Modelos</Link>
+          <Link to="/admin"              className="text-xs tracking-widest uppercase text-gray-500 hover:text-black transition-colors">Dashboard</Link>
           <Link to="/admin/radio"        className="text-xs tracking-widest uppercase text-gray-500 hover:text-black transition-colors">Rádio</Link>
           <Link to="/admin/instagram"    className="text-xs tracking-widest uppercase text-black border-b border-black pb-px">Instagram</Link>
           <Link to="/admin/applications" className="text-xs tracking-widest uppercase text-gray-500 hover:text-black transition-colors">Inscrições</Link>
@@ -183,12 +183,15 @@ export default function AdminInstagram() {
                     </div>
                     <a href={post.url} target="_blank" rel="noopener noreferrer"
                       className="flex-1 text-xs text-gray-500 hover:text-black truncate font-light min-w-0">{post.url}</a>
-                    {!post.image_url && (
-                      <button onClick={()=>{setUploadFor(post.id);setUploadMode('url');setUploadUrl('');setUploadFile(null);setUploadPrev(null);}}
-                        className="text-[9px] tracking-widest uppercase text-amber-500 hover:text-black transition-colors flex-shrink-0">
-                        + imagem
-                      </button>
-                    )}
+
+                    {/* Trocar imagem — sempre disponível */}
+                    <button onClick={()=>{
+                        setUploadFor(uploadFor===post.id ? null : post.id);
+                        setUploadMode('url'); setUploadUrl(''); setUploadFile(null); setUploadPrev(null);
+                      }}
+                      className={`text-[9px] tracking-widest uppercase transition-colors flex-shrink-0 ${!post.image_url ? 'text-amber-500' : 'text-gray-300 opacity-0 group-hover:opacity-100'} hover:text-black`}>
+                      {!post.image_url ? '+ imagem' : 'trocar'}
+                    </button>
                     <button onClick={()=>remove(post.id)}
                       className="text-[10px] tracking-widest uppercase text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 ml-2 flex-shrink-0">
                       Remover
