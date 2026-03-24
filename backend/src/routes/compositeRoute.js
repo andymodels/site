@@ -27,16 +27,22 @@ const LOGO_PATH = POSSIBLE_LOGOS.find(p => fs.existsSync(p)) || null;
 function getMeasures(model) {
   const cats = (() => { try { return JSON.parse(model.categories || '[]'); } catch { return []; } })();
   const isMen = cats.includes('men') || model.category === 'men';
-  if (isMen) {
-    return [
-      ['height', 'Height'], ['torax', 'Chest'], ['terno', 'Suit'],
-      ['camisa', 'Shirt'], ['manequim', 'Size'], ['shoes', 'Shoes'],
-    ].filter(([k]) => model[k]).map(([k, l]) => `${l.toUpperCase()} ${model[k]}`).join('   ');
-  }
-  return [
-    ['height', 'Height'], ['bust', 'Bust'], ['waist', 'Waist'],
-    ['hips', 'Hips'], ['manequim', 'Size'], ['shoes', 'Shoes'],
-  ].filter(([k]) => model[k]).map(([k, l]) => `${l.toUpperCase()} ${model[k]}`).join('   ');
+
+  const womenFields = [
+    ['height','Height'], ['bust','Bust'], ['waist','Waist'], ['hips','Hips'],
+    ['manequim','Size'], ['shoes','Shoes'], ['hair','Hair'], ['eyes','Eyes'],
+  ];
+  const menFields = [
+    ['height','Height'], ['torax','Chest'], ['waist','Waist'],
+    ['terno','Suit'], ['camisa','Shirt'], ['manequim','Size'],
+    ['shoes','Shoes'], ['hair','Hair'], ['eyes','Eyes'],
+  ];
+
+  const fields = isMen ? menFields : womenFields;
+  return fields
+    .filter(([k]) => model[k] && String(model[k]).trim())
+    .map(([k, l]) => `${l.toUpperCase()} ${model[k]}`)
+    .join(' | ');
 }
 
 // ── Page layout constants (A4 Landscape: 842 × 595 pt) ───────────────────────
@@ -57,8 +63,6 @@ function drawPageFrame(doc, model, pageNum, totalPages) {
   const H = PAGE_H;
   const logoY = MARGIN + 6;
   const LOGO_H = 38;
-  const NAME_X = MARGIN + 200;
-  const NAME_W = W - NAME_X - MARGIN - 60; // espaço para contador à direita
 
   // ── logo ──────────────────────────────────────────────────────────────────
   if (LOGO_PATH) {
@@ -68,15 +72,15 @@ function drawPageFrame(doc, model, pageNum, totalPages) {
       .text('ANDY MODELS', MARGIN, logoY + 12, { width: 180, lineBreak: false });
   }
 
-  // ── nome do modelo — destaque central ────────────────────────────────────
-  doc.fontSize(26).fillColor('#111').font('Helvetica-Bold')
-    .text(model.name.toUpperCase(), NAME_X, logoY + 6, {
-      width: NAME_W,
+  // ── nome do modelo — centralizado na página ───────────────────────────────
+  doc.fontSize(24).fillColor('#111').font('Helvetica-Bold')
+    .text(model.name.toUpperCase(), MARGIN, logoY + 6, {
+      width: W - MARGIN * 2,
       align: 'center',
       lineBreak: false,
     });
 
-  // ── contador — direita ────────────────────────────────────────────────────
+  // ── contador — direita (desenhado após o nome para sobrepor se necessário) ─
   doc.fontSize(7).fillColor('#aaa').font('Helvetica')
     .text(`${pageNum} / ${totalPages}`, W - MARGIN - 55, logoY + 16, {
       width: 55,
@@ -89,11 +93,18 @@ function drawPageFrame(doc, model, pageNum, totalPages) {
     .lineTo(W - MARGIN, MARGIN + HEADER_H)
     .lineWidth(0.4).strokeColor('#ccc').stroke();
 
-  // ── rodapé: medidas + site ────────────────────────────────────────────────
+  // ── rodapé: medidas + localização + site ──────────────────────────────────
   const footerY = H - MARGIN - FOOTER_H + 8;
+  const location = (model.city && String(model.city).trim())
+    ? model.city.toUpperCase()
+    : (model.model_status || 'IN TOWN');
   const measureStr = getMeasures(model);
+  const footerLeft = measureStr
+    ? `${measureStr}   ·   ${location}`
+    : location;
+
   doc.fontSize(6.5).fillColor('#888').font('Helvetica')
-    .text(measureStr, MARGIN, footerY, { width: W - MARGIN * 2 - 90, lineBreak: false });
+    .text(footerLeft, MARGIN, footerY, { width: W - MARGIN * 2 - 90, lineBreak: false });
   doc.fontSize(6.5).fillColor('#bbb').font('Helvetica')
     .text('andymodels.com', W - MARGIN - 90, footerY, { width: 90, align: 'right', lineBreak: false });
 
