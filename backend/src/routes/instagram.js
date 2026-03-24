@@ -30,63 +30,90 @@ try { db.prepare('ALTER TABLE instagram_embeds ADD COLUMN local_file TEXT').run(
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
-function fetchText(url, maxBytes = 80000) {
+function fetchText(url, maxBytes = 80000, timeoutMs = 5000) {
   return new Promise((resolve) => {
     const lib = url.startsWith('https') ? https : http;
+    let settled = false;
+    const done = (v) => { if (!settled) { settled = true; resolve(v); } };
+
+    const timer = setTimeout(() => { req.destroy(); done(''); }, timeoutMs);
+
     const req = lib.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)',
         'Accept-Language': 'en-US,en;q=0.9',
       },
-      timeout: 8000,
     }, (res) => {
-      // follow one redirect
       if ([301,302,307,308].includes(res.statusCode) && res.headers.location) {
-        return fetchText(res.headers.location, maxBytes).then(resolve);
+        clearTimeout(timer);
+        return fetchText(res.headers.location, maxBytes, timeoutMs).then(done);
       }
       let body = '';
       res.on('data', chunk => { body += chunk; if (body.length > maxBytes) req.destroy(); });
-      res.on('end', () => resolve(body));
+      res.on('end', () => { clearTimeout(timer); done(body); });
     });
-    req.on('error', () => resolve(''));
-    req.on('timeout', () => { req.destroy(); resolve(''); });
+    req.on('error', () => { clearTimeout(timer); done(''); });
+    req.on('timeout', () => { req.destroy(); done(''); });
   });
 }
 
-function downloadFile(url, destPath) {
+function downloadFile(url, destPath, timeoutMs = 8000) {
   return new Promise((resolve, reject) => {
     const lib = url.startsWith('https') ? https : http;
-    const req = lib.get(url, { timeout: 15000 }, (res) => {
+    let settled = false;
+    const fail  = (e) => { if (!settled) { settled = true; reject(e); } };
+    const ok    = ()  => { if (!settled) { settled = true; resolve(); } };
+
+    const timer = setTimeout(() => { req.destroy(); fail(new Error('timeout')); }, timeoutMs);
+
+    const req = lib.get(url, (res) => {
       if ([301,302,307,308].includes(res.statusCode) && res.headers.location) {
-        return downloadFile(res.headers.location, destPath).then(resolve).catch(reject);
+        clearTimeout(timer);
+        return downloadFile(res.headers.location, destPath, timeoutMs).then(ok).catch(fail);
       }
-      if (res.statusCode !== 200) return reject(new Error(`HTTP ${res.statusCode}`));
+      if (res.statusCode !== 200) { clearTimeout(timer); return fail(new Error(`HTTP ${res.statusCode}`)); }
       const stream = fs.createWriteStream(destPath);
       res.pipe(stream);
-      stream.on('finish', () => resolve());
-      stream.on('error', reject);
+      stream.on('finish', () => { clearTimeout(timer); ok(); });
+      stream.on('error',  (e) => { clearTimeout(timer); fail(e); });
     });
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.on('error',   (e) => { clearTimeout(timer); fail(e); });
+    req.on('timeout', ()  => { req.destroy(); fail(new Error('timeout')); });
   });
 }
 
 async function extractAndDownload(postUrl) {
+  console.log(`[instagram] buscando og:image para: ${postUrl}`);
   const html = await fetchText(postUrl);
+
+  if (!html) {
+    console.warn('[instagram] Instagram bloqueou ou timeout na requisição de página.');
+    return { image_url: null, local_file: null, blocked: true };
+  }
+
   const match = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
              || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-  if (!match) return { image_url: null, local_file: null };
+
+  if (!match) {
+    console.warn('[instagram] og:image não encontrado no HTML.');
+    return { image_url: null, local_file: null, blocked: false };
+  }
 
   const ogImage = match[1].replace(/&amp;/g, '&');
-  const ext     = ogImage.match(/\.(jpg|jpeg|png|webp)/i)?.[1] || 'jpg';
-  const fname   = `ig_${Date.now()}.${ext}`;
-  const fpath   = path.join(IG_DIR, fname);
+  console.log(`[instagram] og:image encontrado: ${ogImage.slice(0, 80)}...`);
+
+  const ext   = ogImage.match(/\.(jpg|jpeg|png|webp)/i)?.[1] || 'jpg';
+  const fname = `ig_${Date.now()}.${ext}`;
+  const fpath = path.join(IG_DIR, fname);
 
   try {
     await downloadFile(ogImage, fpath);
-    return { image_url: `${IG_URL_BASE}/${fname}`, local_file: fname };
-  } catch {
-    return { image_url: ogImage, local_file: null }; // fallback: URL externa
+    console.log(`[instagram] imagem salva: ${fname}`);
+    return { image_url: `${IG_URL_BASE}/${fname}`, local_file: fname, blocked: false };
+  } catch (e) {
+    console.error(`[instagram] falha no download da imagem: ${e.message}`);
+    try { fs.unlinkSync(fpath); } catch {}
+    return { image_url: null, local_file: null, blocked: false };
   }
 }
 
@@ -129,15 +156,27 @@ router.post('/', adminAuth, async (req, res) => {
     return res.status(400).json({ error: 'URL inválida.' });
   }
   const clean = url.split('?')[0].replace(/\/$/, '') + '/';
-  const { image_url, local_file } = await extractAndDownload(clean).catch(() => ({ image_url: null, local_file: null }));
+
+  let result = { image_url: null, local_file: null, blocked: false };
+  try {
+    result = await extractAndDownload(clean);
+  } catch (e) {
+    console.error('[instagram] erro inesperado:', e.message);
+  }
+
+  if (result.blocked) {
+    return res.status(422).json({
+      error: 'Não foi possível extrair a imagem do post. O Instagram bloqueou a requisição. Tente novamente em instantes.',
+    });
+  }
 
   try {
     const row = db.prepare(
       'INSERT INTO instagram_embeds (url, image_url, local_file, position) VALUES (?, ?, ?, (SELECT COALESCE(MAX(position),0)+1 FROM instagram_embeds))'
-    ).run(clean, image_url, local_file);
-    res.json({ id: row.lastInsertRowid, url: clean, image_url });
+    ).run(clean, result.image_url, result.local_file);
+    res.json({ id: row.lastInsertRowid, url: clean, image_url: result.image_url });
   } catch (e) {
-    deleteLocalFile(local_file);
+    deleteLocalFile(result.local_file);
     if (e.message.includes('UNIQUE')) return res.status(409).json({ error: 'Post já adicionado.' });
     res.status(500).json({ error: e.message });
   }
