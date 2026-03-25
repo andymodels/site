@@ -607,10 +607,14 @@ router.post('/:id/drive-import', adminAuth, async (req, res) => {
     const { folder_url, replace = false } = req.body;
     if (!folder_url) return res.status(400).json({ error: 'folder_url required' });
 
-    // Extract folder ID from various Drive URL formats
-    const folderIdMatch = folder_url.match(/[-\w]{25,}/);
-    if (!folderIdMatch) return res.status(400).json({ error: 'Could not extract folder ID from URL' });
-    const folderId = folderIdMatch[0];
+    // Extract folder ID from various Drive URL formats:
+    // /drive/folders/{id}, /drive/u/0/folders/{id}, ?id={id}, /open?id={id}
+    let folderId = null;
+    const foldersMatch = folder_url.match(/\/folders\/([a-zA-Z0-9_-]{10,})/);
+    const idParamMatch = folder_url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
+    if (foldersMatch)     folderId = foldersMatch[1];
+    else if (idParamMatch) folderId = idParamMatch[1];
+    if (!folderId) return res.status(400).json({ error: 'Não foi possível extrair o ID da pasta. Use o link completo da pasta do Google Drive.' });
 
     // Build auth with service account
     const auth = await getAuthorizedAuth();

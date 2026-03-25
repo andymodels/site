@@ -568,7 +568,7 @@ export default function ModelForm() {
                 Cole o link de uma pasta do Drive. Todas as imagens serão baixadas, redimensionadas para 1080px e salvas automaticamente.
               </p>
               <input
-                type="url"
+                type="text"
                 value={driveUrl}
                 onChange={e => setDriveUrl(e.target.value)}
                 placeholder="https://drive.google.com/drive/folders/..."
