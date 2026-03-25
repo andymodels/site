@@ -371,6 +371,32 @@ export default function ModelForm() {
           </div>
         </section>
 
+        {/* Configurações */}
+        <section>
+          <p className={secHdr}>Configurações</p>
+          <div className="flex gap-8">
+            {[['featured','Destaque'],['active','Ativo']].map(([k,l]) => (
+              <label key={k} className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={form[k]}
+                  onChange={e => setForm(p=>({...p,[k]:e.target.checked}))} className="w-4 h-4 accent-black" />
+                <span className="text-xs tracking-widest uppercase text-gray-600">{l}</span>
+              </label>
+            ))}
+            {form.featured && (
+              <label className="flex items-center gap-2">
+                <span className="text-xs tracking-widest uppercase text-gray-400">Ordem na home</span>
+                <input
+                  type="number" min="1"
+                  value={form.home_order}
+                  onChange={e => setForm(p => ({ ...p, home_order: e.target.value }))}
+                  placeholder="—"
+                  className="w-16 border-b border-gray-300 bg-transparent text-xs text-center py-1 outline-none focus:border-black"
+                />
+              </label>
+            )}
+          </div>
+        </section>
+
         {/* Categorias */}
         <section>
           <p className={secHdr}>Categorias</p>
@@ -651,32 +677,6 @@ export default function ModelForm() {
               </div>
               {videoError && <p className="text-[10px] text-red-500 mt-1">{videoError}</p>}
             </div>
-          </div>
-        </section>
-
-        {/* Configurações */}
-        <section>
-          <p className={secHdr}>Configurações</p>
-          <div className="flex gap-8">
-            {[['featured','Destaque'],['active','Ativo']].map(([k,l]) => (
-              <label key={k} className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={form[k]}
-                  onChange={e => setForm(p=>({...p,[k]:e.target.checked}))} className="w-4 h-4 accent-black" />
-                <span className="text-xs tracking-widest uppercase text-gray-600">{l}</span>
-              </label>
-            ))}
-            {form.featured && (
-              <label className="flex items-center gap-2">
-                <span className="text-xs tracking-widest uppercase text-gray-400">Ordem na home</span>
-                <input
-                  type="number" min="1"
-                  value={form.home_order}
-                  onChange={e => setForm(p => ({ ...p, home_order: e.target.value }))}
-                  placeholder="—"
-                  className="w-16 border-b border-gray-300 bg-transparent text-xs text-center py-1 outline-none focus:border-black"
-                />
-              </label>
-            )}
           </div>
         </section>
 
