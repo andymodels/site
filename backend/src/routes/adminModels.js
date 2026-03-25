@@ -6,7 +6,6 @@ const db     = require('../db');
 const adminAuth = require('../middleware/auth');
 const { processImageBuffer, clearModelImages, thumbFromFull } = require('../services/imageProcessor');
 const { google } = require('googleapis');
-const { getAuthorizedAuth } = require('../auth');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -616,8 +615,13 @@ router.post('/:id/drive-import', adminAuth, async (req, res) => {
     else if (idParamMatch) folderId = idParamMatch[1];
     if (!folderId) return res.status(400).json({ error: 'Não foi possível extrair o ID da pasta. Use o link completo da pasta do Google Drive.' });
 
-    // Build auth with service account
-    const auth = await getAuthorizedAuth();
+    // Build auth — simple service account, no impersonation needed for Drive read
+    const auth = new google.auth.JWT({
+      email: process.env.GOOGLE_CLIENT_EMAIL,
+      key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+      scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+    });
+    await auth.authorize();
 
     const drive = google.drive({ version: 'v3', auth });
 
