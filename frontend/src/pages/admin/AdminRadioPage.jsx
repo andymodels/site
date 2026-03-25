@@ -135,10 +135,6 @@ export default function AdminRadioPage() {
             className="text-xs tracking-widest uppercase text-gray-500 hover:text-black transition-colors">
             ← Modelos
           </Link>
-          <Link to="/admin/sync"
-            className="text-xs tracking-widest uppercase text-gray-500 hover:text-black transition-colors border border-gray-200 px-4 py-2.5 hover:border-black">
-            Sync Drive
-          </Link>
           <button onClick={logout}
             className="text-xs tracking-widest uppercase text-gray-400 hover:text-black transition-colors">
             Sair
