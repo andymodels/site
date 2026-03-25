@@ -30,14 +30,20 @@ const upload = multer({
 });
 
 // ── Resend ─────────────────────────────────────────────────────────────────
-async function sendApplicationEmail(appData, photoCount) {
+async function sendApplicationEmail(appData, photoFiles) {
   const cat = appData.category === 'men' ? 'Masculino' : 'Feminino';
   const loc = [appData.city, appData.state].filter(Boolean).join(' / ') || '—';
+
+  const attachments = (photoFiles || []).map((f, i) => ({
+    filename: `foto_${i + 1}.${f.mimetype === 'image/png' ? 'png' : 'jpg'}`,
+    content:  f.buffer.toString('base64'),
+  }));
 
   await resend.emails.send({
     from: 'Andy Models <msn@andymodels.com>',
     to: ['msn@andymodels.com'],
     subject: `Nova inscrição: ${appData.name} (${cat})`,
+    attachments,
     html: `
       <div style="font-family:Arial,sans-serif;max-width:580px;color:#222">
         <h2 style="font-size:16px;letter-spacing:3px;text-transform:uppercase;border-bottom:1px solid #eee;padding-bottom:12px">
@@ -53,7 +59,7 @@ async function sendApplicationEmail(appData, photoCount) {
             ['Telefone',        appData.phone || '—'],
             ['E-mail',          `<a href="mailto:${appData.email}">${appData.email}</a>`],
             ['Instagram',       appData.instagram || '—'],
-            ['Fotos enviadas',  `${photoCount} foto(s)`],
+            ['Fotos enviadas',  `${photoFiles.length} foto(s) em anexo`],
           ].map(([label, val]) => `
             <tr style="border-bottom:1px solid #f5f5f5">
               <td style="padding:8px 20px 8px 0;color:#888;width:140px;vertical-align:top">${label}</td>
@@ -61,8 +67,9 @@ async function sendApplicationEmail(appData, photoCount) {
             </tr>
           `).join('')}
         </table>
-        <p style="font-size:11px;color:#bbb;margin-top:28px">
-          Acesse o painel admin para visualizar as fotos e atualizar o status desta inscrição.
+        <p style="font-size:13px;color:#555;margin-top:24px">Fotos em anexo neste e-mail.</p>
+        <p style="font-size:11px;color:#bbb;margin-top:8px">
+          Acesse o painel admin para visualizar e atualizar o status desta inscrição.
         </p>
       </div>
     `,
@@ -167,7 +174,7 @@ router.post('/', upload.fields([{ name: 'photos', maxCount: 5 }, { name: 'pdf', 
   const appData = { name, email, phone, age, height, city, state, instagram, category };
   let mailResult;
   try {
-    mailResult = await sendApplicationEmail(appData, photoFiles.length);
+    mailResult = await sendApplicationEmail(appData, photoFiles);
   } catch (e) {
     console.error('[mail] Erro ao enviar:', e.message);
     // Marcar no banco que e-mail falhou (não perdemos o cadastro)
