@@ -295,14 +295,21 @@ export default function ModelForm() {
     setMediaItems(prev => prev.filter((_,j) => j!==i));
   }
 
+  const isMale   = categories.includes('men')   && !categories.includes('women');
+  const isFemale = categories.includes('women') && !categories.includes('men');
+  const MALE_ONLY   = ['torax', 'terno', 'camisa'];
+  const FEMALE_ONLY = ['bust', 'waist', 'hips'];
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError(''); setSaving(true);
     try {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => {
+        if (isMale   && FEMALE_ONLY.includes(k)) return;
+        if (isFemale && MALE_ONLY.includes(k))   return;
         if (k === 'featured' || k === 'active') fd.append(k, v ? '1' : '0');
-        else if (k === 'bio') fd.append(k, v ?? ''); // sempre envia, mesmo vazia
+        else if (k === 'bio') fd.append(k, v ?? '');
         else if (v !== '') fd.append(k, v);
       });
       fd.append('categories', JSON.stringify(categories));
@@ -382,9 +389,27 @@ export default function ModelForm() {
         <section>
           <p className={secHdr}>Medidas</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
-            {[['height','Altura'],['bust','Busto/Tórax'],['waist','Cintura'],['hips','Quadril'],['shoes','Calçado'],['eyes','Olhos'],['hair','Cabelo'],['torax','Tórax (Masc.)'],['terno','Terno'],['camisa','Camisa'],['manequim','Manequim']].map(([k,l]) => (
-              <div key={k}><label className={lbl}>{l}</label><input type="text" className={input} {...field(k)} /></div>
-            ))}
+            {[
+              ['height',   'Altura'],
+              ['bust',     'Busto',        'female'],
+              ['waist',    'Cintura',      'female'],
+              ['hips',     'Quadril',      'female'],
+              ['torax',    'Tórax',        'male'],
+              ['terno',    'Terno',        'male'],
+              ['camisa',   'Camisa',       'male'],
+              ['shoes',    'Calçado'],
+              ['manequim', 'Manequim'],
+              ['eyes',     'Olhos'],
+              ['hair',     'Cabelo'],
+            ]
+              .filter(([, , gender]) => {
+                if (gender === 'male'   && isFemale) return false;
+                if (gender === 'female' && isMale)   return false;
+                return true;
+              })
+              .map(([k, l]) => (
+                <div key={k}><label className={lbl}>{l}</label><input type="text" className={input} {...field(k)} /></div>
+              ))}
           </div>
         </section>
 
