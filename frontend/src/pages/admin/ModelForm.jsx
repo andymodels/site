@@ -111,9 +111,12 @@ export default function ModelForm() {
   const [mediaItems, setMediaItems]   = useState([]);
   const [urlInput, setUrlInput]         = useState('');
   const [urlPolaroid, setUrlPolaroid]   = useState(false);
-  const [urlMode, setUrlMode]           = useState('import'); // 'import' | 'direct'
+  const [urlMode, setUrlMode]           = useState('import');
   const [urlImporting, setUrlImporting] = useState(false);
   const [urlResult, setUrlResult]       = useState(null);
+  const [driveUrl, setDriveUrl]         = useState('');
+  const [driveImporting, setDriveImporting] = useState(false);
+  const [driveResult, setDriveResult]   = useState(null);
   const [videoInput, setVideoInput]   = useState('');
   const [videoError, setVideoError]   = useState('');
   const [coverFile, setCoverFile]     = useState(null);
@@ -156,6 +159,7 @@ export default function ModelForm() {
         });
         setCategories(model.categories?.length ? model.categories : [model.category || 'women']);
         setMediaItems(model.media || []);
+        if (model.drive_folder_id) setDriveUrl(`https://drive.google.com/drive/folders/${model.drive_folder_id}`);
       })
       .catch(() => navigate('/admin/dashboard'))
       .finally(() => setLoading(false));
@@ -249,6 +253,29 @@ export default function ModelForm() {
       setUrlResult({ ok: false, msg: e.message });
     }
     setUrlImporting(false);
+  }
+
+  async function importFromDrive(replace) {
+    if (!driveUrl.trim()) return;
+    if (!isEdit) return alert('Salve o modelo primeiro antes de importar do Drive.');
+    if (replace && !confirm('Substituir TODAS as fotos atuais pelas imagens do Drive?\n\nIsso não pode ser desfeito.')) return;
+    setDriveImporting(true);
+    setDriveResult(null);
+    const token = localStorage.getItem('admin_token');
+    try {
+      const r = await fetch(`/api/admin/models/${id}/drive-import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ folder_url: driveUrl.trim(), replace }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Erro');
+      setMediaItems(data.media || []);
+      setDriveResult({ ok: true, found: data.found, imported: data.imported, errors: data.errors || [] });
+    } catch (e) {
+      setDriveResult({ ok: false, msg: e.message });
+    }
+    setDriveImporting(false);
   }
 
   function addVideo() {
@@ -529,6 +556,49 @@ export default function ModelForm() {
               <label className={lbl}>Adicionar Fotos à Galeria</label>
               <input type="file" ref={galleryRef} accept="image/*" multiple onChange={handleGalleryChange}
                 className="text-xs text-gray-500 file:mr-3 file:text-xs file:tracking-widest file:uppercase file:border file:border-gray-300 file:px-3 file:py-1.5 file:bg-white hover:file:bg-gray-50 file:cursor-pointer" />
+            </div>
+
+            {/* Importar do Google Drive */}
+            <div className="border border-gray-200 p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[9px] tracking-[0.2em] uppercase font-medium text-black">Importar do Google Drive</span>
+                <span className="text-[8px] bg-black text-white px-1.5 py-0.5 tracking-wider uppercase">Pasta</span>
+              </div>
+              <p className="text-[9px] text-gray-400 mb-3 leading-relaxed">
+                Cole o link de uma pasta do Drive. Todas as imagens serão baixadas, redimensionadas para 1080px e salvas automaticamente.
+              </p>
+              <input
+                type="url"
+                value={driveUrl}
+                onChange={e => setDriveUrl(e.target.value)}
+                placeholder="https://drive.google.com/drive/folders/..."
+                className="w-full border border-gray-200 px-3 py-2 text-xs focus:outline-none focus:border-black bg-white mb-3"
+              />
+              <div className="flex gap-2 flex-wrap">
+                <button type="button" onClick={() => importFromDrive(false)}
+                  disabled={driveImporting || !driveUrl.trim()}
+                  className="text-[10px] tracking-[0.18em] uppercase border border-gray-300 text-gray-600 px-4 py-2 hover:border-black hover:text-black transition-colors disabled:opacity-40 bg-white">
+                  {driveImporting ? 'Importando…' : '+ Adicionar fotos'}
+                </button>
+                <button type="button" onClick={() => importFromDrive(true)}
+                  disabled={driveImporting || !driveUrl.trim()}
+                  className="text-[10px] tracking-[0.18em] uppercase bg-black text-white px-4 py-2 hover:bg-gray-800 transition-colors disabled:opacity-40">
+                  {driveImporting ? 'Importando…' : '↺ Substituir tudo'}
+                </button>
+              </div>
+              {!isEdit && (
+                <p className="text-[9px] text-amber-600 mt-2">Salve o modelo antes de importar.</p>
+              )}
+              {driveResult && (
+                <div className={`mt-3 px-3 py-2 text-[10px] ${driveResult.ok ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                  {driveResult.ok
+                    ? `${driveResult.found} foto(s) encontradas → ${driveResult.imported} importadas com sucesso.`
+                    : driveResult.msg}
+                  {driveResult.errors?.length > 0 && (
+                    <p className="mt-1 text-red-500">{driveResult.errors.length} erro(s): {driveResult.errors.slice(0,3).join(' · ')}</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Importar via URL */}
