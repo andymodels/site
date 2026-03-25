@@ -109,9 +109,6 @@ export default function ModelForm() {
   const [form, setForm]               = useState(EMPTY);
   const [categories, setCategories]   = useState(['women']);
   const [mediaItems, setMediaItems]   = useState([]);
-  const [scrapeUrl, setScrapeUrl]       = useState('');
-  const [scraping, setScraping]         = useState(false);
-  const [scrapeResult, setScrapeResult] = useState(null);
   const [urlInput, setUrlInput]         = useState('');
   const [urlPolaroid, setUrlPolaroid]   = useState(false);
   const [urlMode, setUrlMode]           = useState('import'); // 'import' | 'direct'
@@ -215,29 +212,6 @@ export default function ModelForm() {
       setUrlResult({ ok: false, msg: e.message });
     }
     setUrlImporting(false);
-  }
-
-  async function scrapeFromPortfolio(replace) {
-    if (!scrapeUrl.trim()) return;
-    if (!isEdit) return alert('Salve o modelo primeiro.');
-    if (replace && !confirm(`Substituir TODAS as fotos atuais pelas imagens encontradas em:\n${scrapeUrl}\n\nIsso não pode ser desfeito.`)) return;
-    setScraping(true);
-    setScrapeResult(null);
-    const token = localStorage.getItem('admin_token');
-    try {
-      const r = await fetch(`/api/admin/models/${id}/scrape`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ page_url: scrapeUrl.trim(), replace }),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Erro');
-      setMediaItems(data.media || []);
-      setScrapeResult({ ok: true, found: data.found, imported: data.imported, errors: data.errors || [] });
-    } catch (e) {
-      setScrapeResult({ ok: false, msg: e.message });
-    }
-    setScraping(false);
   }
 
   async function replaceAllFromUrl() {
@@ -557,51 +531,6 @@ export default function ModelForm() {
                 className="text-xs text-gray-500 file:mr-3 file:text-xs file:tracking-widest file:uppercase file:border file:border-gray-300 file:px-3 file:py-1.5 file:bg-white hover:file:bg-gray-50 file:cursor-pointer" />
             </div>
 
-            {/* Importar do site andymodels.com (Adobe Portfolio) */}
-            <div className="border border-black p-5 bg-gray-50">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-[9px] tracking-[0.2em] uppercase font-medium text-black">Importar do andymodels.com</span>
-                <span className="text-[8px] bg-black text-white px-1.5 py-0.5 tracking-wider uppercase">Automático</span>
-              </div>
-              <p className="text-[9px] text-gray-500 mb-3 leading-relaxed">
-                Cole a URL da página do modelo no site atual. O sistema extrai todas as fotos automaticamente do Adobe Portfolio CDN e importa localmente.
-              </p>
-              <div className="flex gap-2 mb-3">
-                <input
-                  type="url"
-                  value={scrapeUrl}
-                  onChange={e => setScrapeUrl(e.target.value)}
-                  placeholder="https://andymodels.com/alika-vieira"
-                  className="flex-1 border border-gray-200 px-3 py-2 text-xs focus:outline-none focus:border-black bg-white"
-                />
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <button type="button" onClick={() => scrapeFromPortfolio(false)}
-                  disabled={scraping || !scrapeUrl.trim()}
-                  className="text-[10px] tracking-[0.18em] uppercase border border-gray-300 text-gray-600 px-4 py-2 hover:border-black hover:text-black transition-colors disabled:opacity-40 bg-white">
-                  {scraping ? 'Importando…' : '+ Adicionar fotos'}
-                </button>
-                <button type="button" onClick={() => scrapeFromPortfolio(true)}
-                  disabled={scraping || !scrapeUrl.trim()}
-                  className="text-[10px] tracking-[0.18em] uppercase bg-black text-white px-4 py-2 hover:bg-gray-800 transition-colors disabled:opacity-40">
-                  {scraping ? 'Importando…' : '↺ Substituir tudo'}
-                </button>
-              </div>
-              {!isEdit && (
-                <p className="text-[9px] text-amber-600 mt-2">Salve o modelo antes de importar.</p>
-              )}
-              {scrapeResult && (
-                <div className={`mt-3 px-3 py-2 text-[10px] ${scrapeResult.ok ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
-                  {scrapeResult.ok
-                    ? `${scrapeResult.found} foto(s) encontradas → ${scrapeResult.imported} importadas com sucesso.`
-                    : scrapeResult.msg}
-                  {scrapeResult.errors?.length > 0 && (
-                    <p className="mt-1 text-red-500">{scrapeResult.errors.length} erro(s) de download.</p>
-                  )}
-                </div>
-              )}
-            </div>
-
             {/* Importar via URL */}
             <div className="border border-gray-100 p-5">
               <div className="flex items-center justify-between mb-4">
@@ -619,13 +548,13 @@ export default function ModelForm() {
               </div>
               <p className="text-[9px] text-gray-400 mb-3 leading-relaxed">
                 {urlMode === 'import'
-                  ? 'Download + processa localmente: preserva qualidade, gera thumbnails, salva no servidor. Recomendado para imagens do andymodels.com.'
+                  ? 'Download + processa localmente: preserva qualidade, gera thumbnails, salva no servidor.'
                   : 'Armazena URL sem download: exibe imagem diretamente da fonte. Útil para links já estáveis.'}
               </p>
               <textarea
                 value={urlInput}
                 onChange={e => setUrlInput(e.target.value)}
-                placeholder={'Cole URLs diretas de imagens (jpg/png)\nUma por linha\n\nEx: http://www.andymodels.com/img/modelos/adam/01.jpg'}
+                placeholder={'Cole URLs diretas de imagens (jpg/png)\nUma por linha'}
                 rows={5}
                 className="w-full border border-gray-200 px-3 py-2.5 text-xs font-mono focus:outline-none focus:border-black resize-y mb-3"
               />
