@@ -1,13 +1,15 @@
 const router    = require('express').Router();
 const multer    = require('multer');
-const nodemailer = require('nodemailer');
 const path      = require('path');
 const fs        = require('fs');
 const sharp     = require('sharp');
+const { Resend } = require('resend');
 const db        = require('../db');
 const config    = require('../config');
 const adminAuth = require('../middleware/auth');
 const { getIp, checkRateLimit, sanitize, isHoneypot } = require('../utils/spam');
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ── Diretórios ─────────────────────────────────────────────────────────────
 const TEMP_DIR  = path.join(config.uploadsDir, 'temp');
@@ -27,47 +29,14 @@ const upload = multer({
   },
 });
 
-// ── SMTP ───────────────────────────────────────────────────────────────────
-function createMailer() {
-  const { SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_PORT, SMTP_SECURE } = process.env;
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return null;
-  return nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: parseInt(SMTP_PORT || '587'),
-    secure: SMTP_SECURE === 'true',
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
-  });
-}
-
-async function sendApplicationEmail(appData, photoFiles, pdfFile) {
-  const mailer = createMailer();
-  if (!mailer) {
-    console.warn('[mail] SMTP não configurado — configure SMTP_HOST, SMTP_USER e SMTP_PASS');
-    return { ok: false, reason: 'SMTP não configurado' };
-  }
-
-  const to  = process.env.NOTIFICATION_EMAIL || 'msn@andymodels.com';
+// ── Resend ─────────────────────────────────────────────────────────────────
+async function sendApplicationEmail(appData, photoCount) {
   const cat = appData.category === 'men' ? 'Masculino' : 'Feminino';
   const loc = [appData.city, appData.state].filter(Boolean).join(' / ') || '—';
 
-  const attachments = (photoFiles || []).map((f, i) => ({
-    filename: `foto_${i + 1}.${f.mimetype === 'image/png' ? 'png' : 'jpg'}`,
-    content:  f.buffer,
-    contentType: f.mimetype,
-  }));
-
-  if (pdfFile) {
-    attachments.push({
-      filename: 'material.pdf',
-      content:  pdfFile.buffer,
-      contentType: 'application/pdf',
-    });
-  }
-
-  await mailer.sendMail({
-    from: `"Andy Models Site" <${process.env.SMTP_USER}>`,
-    to,
-    replyTo: appData.email,
+  await resend.emails.send({
+    from: 'Andy Models <msn@andymodels.com>',
+    to: ['msn@andymodels.com'],
     subject: `Nova inscrição: ${appData.name} (${cat})`,
     html: `
       <div style="font-family:Arial,sans-serif;max-width:580px;color:#222">
@@ -76,17 +45,15 @@ async function sendApplicationEmail(appData, photoFiles, pdfFile) {
         </h2>
         <table style="font-size:14px;border-collapse:collapse;width:100%;margin-top:16px">
           ${[
-            ['Nome',           appData.name],
-            ['Categoria',      cat],
-            ['Idade',          appData.age || '—'],
-            ['Altura',         appData.height || '—'],
-            ['Cidade / Estado',loc],
-            ['Telefone',       appData.phone || '—'],
-            ['E-mail',         `<a href="mailto:${appData.email}">${appData.email}</a>`],
-            ['Instagram',      appData.instagram
-              ? `<a href="https://instagram.com/${appData.instagram.replace('@','')}">@${appData.instagram.replace('@','')}</a>`
-              : '—'],
-            ['Fotos enviadas', `${attachments.length} foto(s) em anexo`],
+            ['Nome',            appData.name],
+            ['Categoria',       cat],
+            ['Idade',           appData.age || '—'],
+            ['Altura',          appData.height || '—'],
+            ['Cidade / Estado', loc],
+            ['Telefone',        appData.phone || '—'],
+            ['E-mail',          `<a href="mailto:${appData.email}">${appData.email}</a>`],
+            ['Instagram',       appData.instagram || '—'],
+            ['Fotos enviadas',  `${photoCount} foto(s)`],
           ].map(([label, val]) => `
             <tr style="border-bottom:1px solid #f5f5f5">
               <td style="padding:8px 20px 8px 0;color:#888;width:140px;vertical-align:top">${label}</td>
@@ -95,11 +62,10 @@ async function sendApplicationEmail(appData, photoFiles, pdfFile) {
           `).join('')}
         </table>
         <p style="font-size:11px;color:#bbb;margin-top:28px">
-          Acesse o painel admin para atualizar o status desta inscrição.
+          Acesse o painel admin para visualizar as fotos e atualizar o status desta inscrição.
         </p>
       </div>
     `,
-    attachments,
   });
 
   return { ok: true };
@@ -201,7 +167,7 @@ router.post('/', upload.fields([{ name: 'photos', maxCount: 5 }, { name: 'pdf', 
   const appData = { name, email, phone, age, height, city, state, instagram, category };
   let mailResult;
   try {
-    mailResult = await sendApplicationEmail(appData, photoFiles, savedPdf ? pdfFiles[0] : null);
+    mailResult = await sendApplicationEmail(appData, photoFiles.length);
   } catch (e) {
     console.error('[mail] Erro ao enviar:', e.message);
     // Marcar no banco que e-mail falhou (não perdemos o cadastro)
