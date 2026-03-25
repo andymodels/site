@@ -20,8 +20,8 @@ function getMeasures(model) {
   const isMen = model.category === 'men' || cats.includes('men');
   return (isMen ? MEASURES_MEN : MEASURES_WOMEN).filter(([k]) => model[k] && String(model[k]).trim());
 }
-const CAT_LABEL = { women:'Women', men:'Men', 'new-faces':'New Faces', creators:'Creators' };
-const CAT_PATH  = { women:'/women', men:'/men', 'new-faces':'/new-faces', creators:'/creators' };
+const CAT_LABEL = { women:'Women', men:'Men', creators:'Creators' };
+const CAT_PATH  = { women:'/women', men:'/men', creators:'/creators' };
 const API_BASE  = (import.meta.env.VITE_API_URL || '');
 
 // ── Video thumb card ──────────────────────────────────────────────────────────

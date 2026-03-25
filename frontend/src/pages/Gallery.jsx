@@ -6,13 +6,11 @@ import ModelCard from '../components/ModelCard';
 const PATH_TO_CATEGORY = {
   '/women': 'women',
   '/men': 'men',
-  '/new-faces': 'new-faces',
 };
 
 const CATEGORY_LABEL = {
   women: 'Women',
   men: 'Men',
-  'new-faces': 'New Faces',
 };
 
 export default function Gallery() {

@@ -11,7 +11,7 @@ const translations = {
     },
     category: {
       women: 'Mulheres', men: 'Homens', creators: 'Criadores',
-      'new-faces': 'New Faces', empty: 'Nenhum modelo cadastrado',
+      empty: 'Nenhum modelo cadastrado',
     },
     contact: {
       badge: 'Contato',
@@ -129,7 +129,7 @@ const translations = {
     },
     category: {
       women: 'Women', men: 'Men', creators: 'Creators',
-      'new-faces': 'New Faces', empty: 'No models registered',
+      empty: 'No models registered',
     },
     contact: {
       badge: 'Contact',

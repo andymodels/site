@@ -4,10 +4,9 @@ import { adminGetModel, adminCreateModel, adminUpdateModel } from '../../api';
 import { parseVideoUrl } from '../../utils/videoUtils';
 
 const ALL_CATEGORIES = [
-  { value: 'women',     label: 'Women'     },
-  { value: 'men',       label: 'Men'       },
-  { value: 'new-faces', label: 'New Faces' },
-  { value: 'creators',  label: 'Creators'  },
+  { value: 'women',    label: 'Women'    },
+  { value: 'men',      label: 'Men'      },
+  { value: 'creators', label: 'Creators' },
 ];
 
 const EMPTY = {
