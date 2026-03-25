@@ -5,7 +5,6 @@ const http   = require('http');
 const db     = require('../db');
 const adminAuth = require('../middleware/auth');
 const { processImageBuffer, clearModelImages, thumbFromFull } = require('../services/imageProcessor');
-const { google } = require('googleapis');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -595,94 +594,6 @@ router.post('/:id/scrape-measurements', async (req, res) => {
     const updated = db.prepare('SELECT * FROM models WHERE id = ?').get(req.params.id);
     res.json({ ok: true, parsed, updated: serializeModel(updated) });
   } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// ─── POST /:id/drive-import — import images from a Google Drive folder ────────
-router.post('/:id/drive-import', adminAuth, async (req, res) => {
-  try {
-    const model = db.prepare('SELECT * FROM models WHERE id = ?').get(req.params.id);
-    if (!model) return res.status(404).json({ error: 'Not found' });
-
-    const { folder_url, replace = false } = req.body;
-    if (!folder_url) return res.status(400).json({ error: 'folder_url required' });
-
-    // Extract folder ID from various Drive URL formats:
-    // /drive/folders/{id}, /drive/u/0/folders/{id}, ?id={id}, /open?id={id}
-    let folderId = null;
-    const foldersMatch = folder_url.match(/\/folders\/([a-zA-Z0-9_-]{10,})/);
-    const idParamMatch = folder_url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
-    if (foldersMatch)     folderId = foldersMatch[1];
-    else if (idParamMatch) folderId = idParamMatch[1];
-    if (!folderId) return res.status(400).json({ error: 'Não foi possível extrair o ID da pasta. Use o link completo da pasta do Google Drive.' });
-
-    // Build auth — simple service account, no impersonation needed for Drive read
-    const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
-    let privateKey    = process.env.GOOGLE_PRIVATE_KEY || '';
-    // Normalize newlines: handle \\n (double-escaped), \n (escaped), or real newlines
-    privateKey = privateKey.replace(/\\\\n/g, '\n').replace(/\\n/g, '\n');
-    if (!clientEmail || !privateKey.includes('PRIVATE KEY')) {
-      return res.status(500).json({
-        error: `Credenciais Google ausentes ou inválidas. GOOGLE_CLIENT_EMAIL: ${clientEmail ? 'ok' : 'MISSING'}, GOOGLE_PRIVATE_KEY: ${privateKey ? 'formato inválido' : 'MISSING'}`,
-      });
-    }
-    const auth = new google.auth.JWT({
-      email: clientEmail,
-      key: privateKey,
-      scopes: ['https://www.googleapis.com/auth/drive.readonly'],
-    });
-    await auth.authorize();
-
-    const drive = google.drive({ version: 'v3', auth });
-
-    // List image files in the folder
-    const listRes = await drive.files.list({
-      q: `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`,
-      fields: 'files(id, name, mimeType)',
-      pageSize: 200,
-      supportsAllDrives: true,
-      includeItemsFromAllDrives: true,
-    });
-
-    const files = listRes.data.files || [];
-    if (!files.length) return res.json({ ok: true, found: 0, imported: 0, errors: [] });
-
-    // Sort by name for consistent ordering
-    files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-
-    if (replace) await clearModelImages(model.slug);
-
-    const mediaItems = replace ? [] : JSON.parse(model.media || '[]');
-    const startIndex = mediaItems.length;
-    const imported = [];
-    const errors   = [];
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      try {
-        const dlRes = await drive.files.get(
-          { fileId: file.id, alt: 'media', supportsAllDrives: true },
-          { responseType: 'arraybuffer' }
-        );
-        const buffer = Buffer.from(dlRes.data);
-        const processed = await processImageBuffer(buffer, model.slug, startIndex + i);
-        mediaItems.push({ type: 'image', url: processed.full, thumb: processed.thumb, polaroid: false });
-        imported.push(file.name);
-      } catch (e) {
-        errors.push(`${file.name}: ${e.message}`);
-      }
-    }
-
-    // Rebuild cover from first image
-    const coverImage = mediaItems[0]?.url || model.cover_image || null;
-
-    db.prepare('UPDATE models SET media = ?, cover_image = ?, drive_folder_id = ? WHERE id = ?')
-      .run(JSON.stringify(mediaItems), coverImage, folderId, model.id);
-
-    const updated = db.prepare('SELECT * FROM models WHERE id = ?').get(model.id);
-    res.json({ ok: true, found: files.length, imported: imported.length, errors, media: JSON.parse(updated.media || '[]') });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
 });
 
 module.exports = router;
