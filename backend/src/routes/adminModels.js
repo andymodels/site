@@ -6,7 +6,7 @@ const db     = require('../db');
 const adminAuth = require('../middleware/auth');
 const { processImageBuffer, clearModelImages, thumbFromFull } = require('../services/imageProcessor');
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
 function slugify(text) {
   return text.toString().toLowerCase().trim()
