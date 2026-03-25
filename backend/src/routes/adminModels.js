@@ -616,9 +616,14 @@ router.post('/:id/drive-import', adminAuth, async (req, res) => {
     if (!folderId) return res.status(400).json({ error: 'Não foi possível extrair o ID da pasta. Use o link completo da pasta do Google Drive.' });
 
     // Build auth — simple service account, no impersonation needed for Drive read
+    const clientEmail  = process.env.GOOGLE_CLIENT_EMAIL;
+    const privateKey   = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
+    if (!clientEmail || !privateKey) {
+      return res.status(500).json({ error: `Credenciais Google não configuradas no servidor. GOOGLE_CLIENT_EMAIL: ${clientEmail ? 'ok' : 'MISSING'}, GOOGLE_PRIVATE_KEY: ${privateKey ? 'ok' : 'MISSING'}` });
+    }
     const auth = new google.auth.JWT({
-      email: process.env.GOOGLE_CLIENT_EMAIL,
-      key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+      email: clientEmail,
+      key: privateKey,
       scopes: ['https://www.googleapis.com/auth/drive.readonly'],
     });
     await auth.authorize();
