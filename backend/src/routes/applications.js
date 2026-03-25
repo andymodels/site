@@ -245,6 +245,7 @@ function runCleanup() {
   const old = db.prepare(`
     SELECT id, photos, thumb_url FROM applications
     WHERE created_at < ? AND photos != '[]' AND photos IS NOT NULL
+    AND status != 'approved'
   `).all(cutoff);
 
   let cleaned = 0;
