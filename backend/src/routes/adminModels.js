@@ -139,7 +139,7 @@ router.post('/', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'g
       agent_notes||null, contract_start||null, contract_end||null);
 
     res.status(201).json(serializeModel(db.prepare('SELECT * FROM models WHERE id = ?').get(result.lastInsertRowid)));
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error('[POST /admin/models]', e.message, e.stack); res.status(500).json({ error: e.message }); }
 });
 
 router.put('/:id', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 20 }]), async (req, res) => {
