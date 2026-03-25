@@ -1,5 +1,9 @@
 const { google } = require('googleapis');
 
+function normalizePrivateKey(raw) {
+  return (raw || '').replace(/\\\\n/g, '\n').replace(/\\n/g, '\n');
+}
+
 function getAuth() {
   const subject = process.env.GOOGLE_SUBJECT_EMAIL || null;
 
@@ -12,7 +16,7 @@ function getAuth() {
 
   const auth = new google.auth.JWT({
     email: process.env.GOOGLE_CLIENT_EMAIL,
-    key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+    key: normalizePrivateKey(process.env.GOOGLE_PRIVATE_KEY),
     scopes: [
       'https://www.googleapis.com/auth/drive',
       'https://www.googleapis.com/auth/spreadsheets.readonly',
@@ -24,8 +28,6 @@ function getAuth() {
   return auth;
 }
 
-// Call this once per request to pre-authorize and confirm subject is applied.
-// Returns the same auth instance — ready for Drive, Sheets, and Slides.
 async function getAuthorizedAuth() {
   const auth = getAuth();
   await auth.authorize();
