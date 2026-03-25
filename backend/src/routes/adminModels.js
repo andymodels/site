@@ -6,6 +6,7 @@ const db     = require('../db');
 const adminAuth = require('../middleware/auth');
 const { processImageBuffer, clearModelImages, thumbFromFull } = require('../services/imageProcessor');
 const { google } = require('googleapis');
+const { getAuthorizedAuth } = require('../auth');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -612,12 +613,7 @@ router.post('/:id/drive-import', adminAuth, async (req, res) => {
     const folderId = folderIdMatch[0];
 
     // Build auth with service account
-    const auth = new google.auth.JWT({
-      email: process.env.GOOGLE_CLIENT_EMAIL,
-      key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-      scopes: ['https://www.googleapis.com/auth/drive.readonly'],
-    });
-    await auth.authorize();
+    const auth = await getAuthorizedAuth();
 
     const drive = google.drive({ version: 'v3', auth });
 
