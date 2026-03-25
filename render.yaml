@@ -17,13 +17,3 @@ services:
         sync: false
       - key: ADMIN_SECRET
         sync: false
-      - key: GOOGLE_CLIENT_EMAIL
-        sync: false
-      - key: GOOGLE_PRIVATE_KEY
-        sync: false
-      - key: PLANILHA_FEMININO_ID
-        value: 188f8GtyTpd9CqLPRaQjFHuqMPaNM6tOD8Mkbvt6va9M
-      - key: PLANILHA_MASCULINO_ID
-        value: 1lVPjjCSQrlMaqa5L41uQOuCP8mOOVtGjdSB2jl4soag
-      - key: DRIVE_SYNC_IMAGES
-        value: "false"
