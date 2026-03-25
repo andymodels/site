@@ -42,7 +42,17 @@ router.get('/:id', (req, res) => {
   res.json(serializeModel(row));
 });
 
-router.post('/', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 20 }]), async (req, res) => {
+const multerUpload = upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 20 }]);
+
+router.post('/', (req, res, next) => {
+  multerUpload(req, res, err => {
+    if (err) {
+      console.error('[POST /admin/models] multer error:', err.message);
+      return res.status(400).json({ error: `Erro no upload: ${err.message}` });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     const { name, age, height, bust, waist, hips, shoes, eyes, hair, city, bio, featured, active,
       torax, terno, camisa, manequim, model_status, home_order,
