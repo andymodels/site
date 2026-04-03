@@ -3,13 +3,11 @@ const multer    = require('multer');
 const path      = require('path');
 const fs        = require('fs');
 const sharp     = require('sharp');
-const { Resend } = require('resend');
 const db        = require('../db');
 const config    = require('../config');
 const adminAuth = require('../middleware/auth');
 const { getIp, checkRateLimit, sanitize, isHoneypot } = require('../utils/spam');
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+const { getResend } = require('../utils/resendClient');
 
 // ── Diretórios ─────────────────────────────────────────────────────────────
 const TEMP_DIR  = path.join(config.uploadsDir, 'temp');
@@ -31,6 +29,12 @@ const upload = multer({
 
 // ── Resend ─────────────────────────────────────────────────────────────────
 async function sendApplicationEmail(appData, photoFiles) {
+  const resend = getResend();
+  if (!resend) {
+    console.warn('[mail] RESEND_API_KEY ausente — e-mail não enviado (normal em dev local)');
+    return { ok: false };
+  }
+
   const cat = appData.category === 'men' ? 'Masculino' : 'Feminino';
   const loc = [appData.city, appData.state].filter(Boolean).join(' / ') || '—';
 

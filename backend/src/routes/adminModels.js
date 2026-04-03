@@ -6,7 +6,18 @@ const db     = require('../db');
 const adminAuth = require('../middleware/auth');
 const { processImageBuffer, clearModelImages, thumbFromFull } = require('../services/imageProcessor');
 
+const MAX_GALLERY_UPLOAD = 80;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+
+/** Multer: "Unexpected field" também ocorre quando se excede maxCount — ex.: mais de N fotos em `gallery`. */
+function multerCoverFile(req) {
+  return req.files?.cover_image?.[0] || req.files?.cover?.[0];
+}
+function multerGalleryFiles(req) {
+  const g = req.files?.gallery || [];
+  const p = req.files?.photos || [];
+  return [...g, ...p].slice(0, MAX_GALLERY_UPLOAD);
+}
 
 function slugify(text) {
   return text.toString().toLowerCase().trim()
@@ -42,13 +53,24 @@ router.get('/:id', (req, res) => {
   res.json(serializeModel(row));
 });
 
-const multerUpload = upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 20 }]);
+const multerUpload = upload.fields([
+  { name: 'cover_image', maxCount: 1 },
+  { name: 'cover', maxCount: 1 },
+  { name: 'gallery', maxCount: MAX_GALLERY_UPLOAD },
+  { name: 'photos', maxCount: MAX_GALLERY_UPLOAD },
+]);
 
 router.post('/', (req, res, next) => {
   multerUpload(req, res, err => {
     if (err) {
-      console.error('[POST /admin/models] multer error:', err.message);
-      return res.status(400).json({ error: `Erro no upload: ${err.message}` });
+      console.error('[POST /admin/models] multer error:', err.code, err.field, err.message);
+      const fieldInfo = err.field ? ` (campo: ${err.field})` : '';
+      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({
+          error: `Nao pode passar de ${MAX_GALLERY_UPLOAD} fotos por envio.${fieldInfo}`,
+        });
+      }
+      return res.status(400).json({ error: `Erro no upload: ${err.message}${fieldInfo}` });
     }
     next();
   });
@@ -98,8 +120,8 @@ router.post('/', (req, res, next) => {
 
     clearModelImages(slug);
 
-    const coverFile    = req.files?.cover_image?.[0];
-    const galleryFiles = req.files?.gallery || [];
+    const coverFile    = multerCoverFile(req);
+    const galleryFiles = multerGalleryFiles(req);
 
     let cover_image = null, cover_thumb = null;
     const media = [];
@@ -152,7 +174,21 @@ router.post('/', (req, res, next) => {
   } catch (e) { console.error('[POST /admin/models]', e.message, e.stack); res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 20 }]), async (req, res) => {
+router.put('/:id', (req, res, next) => {
+  multerUpload(req, res, err => {
+    if (err) {
+      console.error('[PUT /admin/models] multer error:', err.code, err.field, err.message);
+      const fieldInfo = err.field ? ` (campo: ${err.field})` : '';
+      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({
+          error: `Nao pode passar de ${MAX_GALLERY_UPLOAD} fotos por envio.${fieldInfo}`,
+        });
+      }
+      return res.status(400).json({ error: `Erro no upload: ${err.message}${fieldInfo}` });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     const model = db.prepare('SELECT * FROM models WHERE id = ?').get(req.params.id);
     if (!model) return res.status(404).json({ error: 'Not found' });
@@ -171,8 +207,8 @@ router.put('/:id', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 
     const categories = parseField(req.body.categories, JSON.parse(model.categories || '["women"]'));
     const category   = categories[0] || model.category;
 
-    const coverFile    = req.files?.cover_image?.[0];
-    const galleryFiles = req.files?.gallery || [];
+    const coverFile    = multerCoverFile(req);
+    const galleryFiles = multerGalleryFiles(req);
 
     let cover_image = model.cover_image;
     let cover_thumb = model.cover_thumb;

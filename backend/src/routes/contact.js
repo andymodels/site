@@ -1,9 +1,7 @@
 const router = require('express').Router();
 const db     = require('../db');
-const { Resend } = require('resend');
 const { getIp, checkRateLimit, sanitize, isHoneypot } = require('../utils/spam');
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+const { getResend } = require('../utils/resendClient');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS contact_messages (
@@ -49,12 +47,14 @@ router.post('/', async (req, res) => {
     VALUES (?, ?, ?, ?, ?)
   `).run(name, email, phone || null, instagram || null, message);
 
+  const resend = getResend();
   try {
-    await resend.emails.send({
-      from: 'Andy Models <msn@andymodels.com>',
-      to: ['msn@andymodels.com'],
-      subject: 'Novo contato pelo site',
-      html: `
+    if (resend) {
+      await resend.emails.send({
+        from: 'Andy Models <msn@andymodels.com>',
+        to: ['msn@andymodels.com'],
+        subject: 'Novo contato pelo site',
+        html: `
         <div style="font-family: Arial; max-width: 600px;">
           <h2>📩 Novo contato - Andy Models</h2>
           <hr/>
@@ -68,7 +68,10 @@ router.post('/', async (req, res) => {
           </p>
         </div>
       `
-    });
+      });
+    } else {
+      console.warn('[contact] RESEND_API_KEY ausente — e-mail não enviado (normal em dev local)');
+    }
   } catch (err) {
     console.error('[contact] Falha ao enviar e-mail via Resend:', err.message);
   }

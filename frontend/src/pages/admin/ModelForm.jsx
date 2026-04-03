@@ -115,8 +115,6 @@ export default function ModelForm() {
   const [urlResult, setUrlResult]       = useState(null);
   const [videoInput, setVideoInput]   = useState('');
   const [videoError, setVideoError]   = useState('');
-  const [coverFile, setCoverFile]     = useState(null);
-  const [coverPreview, setCoverPreview] = useState(null);
   const [loading, setLoading]         = useState(isEdit);
   const [saving, setSaving]           = useState(false);
   const [error, setError]             = useState('');
@@ -167,10 +165,6 @@ export default function ModelForm() {
     setCategories(prev =>
       prev.includes(val) ? (prev.length > 1 ? prev.filter(c => c !== val) : prev) : [...prev, val]
     );
-  }
-  function handleCoverChange(e) {
-    const f = e.target.files[0];
-    if (f) { setCoverFile(f); setCoverPreview(URL.createObjectURL(f)); }
   }
   function handleGalleryChange(e) {
     const files = Array.from(e.target.files);
@@ -286,8 +280,6 @@ export default function ModelForm() {
         else if (v !== '') fd.append(k, v);
       });
       fd.append('categories', JSON.stringify(categories));
-
-      if (coverFile) fd.append('cover_image', coverFile);
 
       // For existing media (no _file), send as ordered_images JSON
       // For new image items with _file, send as gallery files
@@ -514,14 +506,6 @@ export default function ModelForm() {
                 />
               </div>
             )}
-
-            {/* Upload nova capa */}
-            <div>
-              <label className={lbl}>Nova Foto de Capa</label>
-              {coverPreview && <img src={coverPreview} alt="" className="w-24 h-32 object-cover object-top mb-3 bg-gray-100" />}
-              <input type="file" accept="image/*" onChange={handleCoverChange}
-                className="text-xs text-gray-500 file:mr-3 file:text-xs file:tracking-widest file:uppercase file:border file:border-gray-300 file:px-3 file:py-1.5 file:bg-white hover:file:bg-gray-50 file:cursor-pointer" />
-            </div>
 
             {/* Upload galeria */}
             <div>
