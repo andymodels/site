@@ -1,0 +1,78 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { LanguageProvider } from './context/LanguageContext';
+import { RadioProvider } from './context/RadioContext';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import RadioPlayer from './components/RadioPlayer';
+import RadioMini from './components/RadioMini';
+import ProtectedRoute from './components/ProtectedRoute';
+import Home from './pages/Home';
+import CategoryPage from './pages/CategoryPage';
+import AboutPage from './pages/AboutPage';
+import InscrevaPage from './pages/InscrevaPage';
+import ContactPage from './pages/ContactPage';
+import ModelPage from './pages/ModelPage';
+import AdminLogin from './pages/admin/AdminLogin';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import ModelForm from './pages/admin/ModelForm';
+import AdminHome from './pages/admin/AdminHome';
+import AdminRadioPage from './pages/admin/AdminRadioPage';
+import AdminApplications from './pages/admin/AdminApplications';
+import AdminInstagram from './pages/admin/AdminInstagram';
+
+export default function App() {
+  return (
+    <LanguageProvider>
+      <RadioProvider>
+        <BrowserRouter>
+          <Navbar />
+          <RadioMini />
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/women" element={<CategoryPage category="women" />} />
+            <Route path="/men" element={<CategoryPage category="men" />} />
+            <Route path="/creators" element={<CategoryPage category="creators" />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/inscreva-se" element={<InscrevaPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+
+            <Route path="/admin" element={<AdminLogin />} />
+            <Route
+              path="/admin/dashboard"
+              element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>}
+            />
+            <Route
+              path="/admin/models/new"
+              element={<ProtectedRoute><ModelForm /></ProtectedRoute>}
+            />
+            <Route
+              path="/admin/models/:id/edit"
+              element={<ProtectedRoute><ModelForm /></ProtectedRoute>}
+            />
+            <Route
+              path="/admin/home"
+              element={<ProtectedRoute><AdminHome /></ProtectedRoute>}
+            />
+            <Route
+              path="/admin/radio"
+              element={<ProtectedRoute><AdminRadioPage /></ProtectedRoute>}
+            />
+            <Route
+              path="/admin/applications"
+              element={<ProtectedRoute><AdminApplications /></ProtectedRoute>}
+            />
+            <Route
+              path="/admin/instagram"
+              element={<ProtectedRoute><AdminInstagram /></ProtectedRoute>}
+            />
+
+            <Route path="/:slug" element={<ModelPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+          <Footer />
+          <RadioPlayer />
+        </BrowserRouter>
+      </RadioProvider>
+    </LanguageProvider>
+  );
+}
