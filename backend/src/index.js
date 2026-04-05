@@ -6,6 +6,7 @@ const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
 const fs      = require('fs');
+const { createModelOgMiddleware } = require('./services/ogHtml');
 
 // Garantir que diretórios de uploads existem — com fallback se sem permissão
 function safeUploadsDir(preferred) {
@@ -60,6 +61,7 @@ console.log('[server] DIST path:', DIST);
 console.log('[server] Frontend dist exists:', fs.existsSync(DIST_INDEX));
 
 app.use(express.static(DIST));
+app.get('/:slug', createModelOgMiddleware(DIST_INDEX));
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) return;
   if (fs.existsSync(DIST_INDEX)) {

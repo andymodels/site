@@ -50,13 +50,31 @@ function pickOgImage(model) {
   return null;
 }
 
+function getOrigin(req) {
+  const explicit = process.env.PUBLIC_SITE_URL || (process.env.FRONTEND_URL || '').split(',')[0].trim();
+  if (explicit) {
+    try {
+      const u = new URL(explicit.includes('://') ? explicit : `https://${explicit}`);
+      return `${u.protocol}//${u.host}`;
+    } catch (_) { /* fall through */ }
+  }
+  const host = req.get('x-forwarded-host') || req.get('host');
+  let proto = (req.get('x-forwarded-proto') || req.protocol || 'https').split(',')[0].trim();
+  if (process.env.NODE_ENV === 'production') proto = 'https';
+  return `${proto}://${host}`;
+}
+
 function absoluteUrl(req, pathOrUrl) {
   if (!pathOrUrl) return null;
-  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
-  const host = req.get('x-forwarded-host') || req.get('host');
-  const proto = (req.get('x-forwarded-proto') || req.protocol || 'https').split(',')[0].trim();
+  if (/^https?:\/\//i.test(pathOrUrl)) {
+    if (process.env.NODE_ENV === 'production' && /^http:\/\//i.test(pathOrUrl)) {
+      return pathOrUrl.replace(/^http:\/\//i, 'https://');
+    }
+    return pathOrUrl;
+  }
+  const origin = getOrigin(req);
   const p = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
-  return `${proto}://${host}${p}`;
+  return `${origin}${p}`;
 }
 
 function injectOg(html, { title, description, imageUrl, pageUrl }) {
@@ -123,9 +141,7 @@ function createModelOgMiddleware(distIndexPath) {
       }
     }
 
-    const host = req.get('x-forwarded-host') || req.get('host');
-    const proto = (req.get('x-forwarded-proto') || req.protocol || 'https').split(',')[0].trim();
-    const origin = `${proto}://${host}`;
+    const origin = getOrigin(req);
 
     const imgPath = pickOgImage(model);
     const imageUrl = absoluteUrl(req, imgPath) || `${origin}/logo.png`;
