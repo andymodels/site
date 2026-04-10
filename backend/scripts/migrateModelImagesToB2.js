@@ -1,74 +1,120 @@
 #!/usr/bin/env node
 /**
- * Conta quantos registros em `models` têm pelo menos uma URL de imagem
- * (cover_image, cover_thumb, images ou media) que não começa com
- * https://f005.backblazeb2.com
- *
- * Usa o mesmo módulo backend/src/db.js do servidor.
- * Apenas contagem — não faz upload nem altera dados aqui.
+ * Um único modelo (slug fixo abaixo): lê uma imagem diretamente de uploads/ no disco,
+ * grava via storage.saveFile, imprime a nova URL. Não atualiza o banco.
  */
 
 const path = require('path');
+const fs = require('fs');
 
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const db = require('../src/db');
+const config = require('../src/config');
+const storage = require('../src/services/storage');
 
-const B2_PREFIX = 'https://f005.backblazeb2.com';
+/** Slug do modelo a processar (editar aqui). */
+const TARGET_SLUG = 'bea-estevam';
 
-function isNonB2ImageUrl(s) {
-  if (s == null || typeof s !== 'string') return false;
-  const t = s.trim();
-  if (!t) return false;
-  return !t.startsWith(B2_PREFIX);
+function readUploadsFile(relativeFromUploadsRoot) {
+  const fp = path.join(config.uploadsDir, relativeFromUploadsRoot);
+  if (!fs.existsSync(fp)) {
+    throw new Error(`Ficheiro não encontrado em uploads: ${fp}`);
+  }
+  return { buffer: fs.readFileSync(fp), absPath: fp };
 }
 
-function rowHasNonB2Image(row) {
-  if (isNonB2ImageUrl(row.cover_image)) return true;
-  if (isNonB2ImageUrl(row.cover_thumb)) return true;
+/**
+ * Preferência: cover_image com caminho /uploads/... existente;
+ * senão primeira URL em `images` ou `media` (imagem) que aponte a um ficheiro existente em disco.
+ */
+function pickLocalUploadsSource(row) {
+  const candidates = [];
+
+  if (row.cover_image?.trim()) {
+    candidates.push({ label: 'cover_image', url: row.cover_image.trim() });
+  }
+  if (row.cover_thumb?.trim()) {
+    candidates.push({ label: 'cover_thumb', url: row.cover_thumb.trim() });
+  }
 
   try {
     const imgs = JSON.parse(row.images || '[]');
     if (Array.isArray(imgs)) {
-      for (const u of imgs) {
-        if (isNonB2ImageUrl(u)) return true;
-      }
-    }
-  } catch {
-    /* ignore malformed JSON */
-  }
-
-  try {
-    const media = JSON.parse(row.media || '[]');
-    if (Array.isArray(media)) {
-      for (const item of media) {
-        if (item.type === 'video') continue;
-        if (item.type && item.type !== 'image') continue;
-        if (isNonB2ImageUrl(item.url)) return true;
-        if (isNonB2ImageUrl(item.thumb)) return true;
-      }
+      imgs.forEach((u, i) => {
+        if (u) candidates.push({ label: `images[${i}]`, url: String(u).trim() });
+      });
     }
   } catch {
     /* ignore */
   }
 
-  return false;
+  try {
+    const media = JSON.parse(row.media || '[]');
+    if (Array.isArray(media)) {
+      media.forEach((item, i) => {
+        if (item.type === 'video') return;
+        if (item.type && item.type !== 'image') return;
+        if (item.url) candidates.push({ label: `media[${i}].url`, url: String(item.url).trim() });
+        if (item.thumb) candidates.push({ label: `media[${i}].thumb`, url: String(item.thumb).trim() });
+      });
+    }
+  } catch {
+    /* ignore */
+  }
+
+  for (const { label, url } of candidates) {
+    if (!url.startsWith('/uploads/')) continue;
+    const rel = url.replace(/^\/uploads\/?/, '');
+    const fp = path.join(config.uploadsDir, rel);
+    if (fs.existsSync(fp)) {
+      return { label, url, rel };
+    }
+  }
+
+  return null;
+}
+
+function originalnameForSave(absPath, slug) {
+  const base = path.basename(absPath);
+  if (base && base !== '.') return `${slug}-${base}`;
+  return `${slug}-image.jpg`;
 }
 
 function main() {
-  const rows = db.prepare('SELECT id, slug, cover_image, cover_thumb, images, media FROM models').all();
+  const row = db
+    .prepare(
+      `SELECT id, slug, cover_image, cover_thumb, images, media FROM models WHERE slug = ?`
+    )
+    .get(TARGET_SLUG);
 
-  let withNonB2 = 0;
-  for (const row of rows) {
-    if (rowHasNonB2Image(row)) withNonB2 += 1;
+  if (!row) {
+    console.error(`[migrateModelImagesToB2] Modelo não encontrado: slug="${TARGET_SLUG}"`);
+    process.exit(1);
   }
 
-  console.log('[migrateModelImagesToB2] Prefixo B2 esperado:', B2_PREFIX);
-  console.log('[migrateModelImagesToB2] Total de registros (models):', rows.length);
-  console.log(
-    '[migrateModelImagesToB2] Registros com pelo menos uma imagem (URL não vazia) que NÃO começa pelo prefixo B2:',
-    withNonB2
-  );
+  const picked = pickLocalUploadsSource(row);
+  if (!picked) {
+    console.error(
+      `[migrateModelImagesToB2] Nenhuma imagem local (/uploads/... com ficheiro existente) para slug="${TARGET_SLUG}".`
+    );
+    process.exit(1);
+  }
+
+  console.log('[migrateModelImagesToB2] Modelo:', { id: row.id, slug: row.slug });
+  console.log('[migrateModelImagesToB2] Origem:', picked.label, '→', picked.url);
+
+  const { buffer, absPath } = readUploadsFile(picked.rel);
+  const originalname = originalnameForSave(absPath, row.slug);
+  const newUrl = storage.saveFile({ buffer, originalname });
+
+  console.log('[migrateModelImagesToB2] UPLOADS_DIR:', config.uploadsDir);
+  console.log('[migrateModelImagesToB2] Nova URL (storage.saveFile):', newUrl);
 }
 
-main();
+try {
+  main();
+} catch (e) {
+  console.error('[migrateModelImagesToB2] Erro:', e.message);
+  process.exit(1);
+}
