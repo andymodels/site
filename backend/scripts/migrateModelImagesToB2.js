@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Um único modelo (slug fixo abaixo): lê uma imagem diretamente de uploads/ no disco,
- * grava via storage.saveFile, imprime a nova URL. Não atualiza o banco.
+ * Um único modelo (TARGET_SLUG): lê imagem de uploads/ no disco,
+ * grava via storage.saveFile, atualiza cover_image no SQLite com a nova URL.
  */
 
 const path = require('path');
@@ -81,7 +81,7 @@ function originalnameForSave(absPath, slug) {
   return `${slug}-image.jpg`;
 }
 
-function main() {
+async function main() {
   const row = db
     .prepare(
       `SELECT id, slug, cover_image, cover_thumb, images, media FROM models WHERE slug = ?`
@@ -106,27 +106,18 @@ function main() {
 
   const { buffer, absPath } = readUploadsFile(picked.rel);
   const originalname = originalnameForSave(absPath, row.slug);
-  const out = storage.saveFile({ buffer, originalname });
+  const newUrl = await storage.saveFile({ buffer, originalname });
 
-  function logResult(newUrl) {
-    console.log('[migrateModelImagesToB2] UPLOADS_DIR:', config.uploadsDir);
-    console.log('[migrateModelImagesToB2] Nova URL (storage.saveFile):', newUrl);
-  }
+  const upd = db
+    .prepare('UPDATE models SET cover_image = ? WHERE slug = ?')
+    .run(newUrl, TARGET_SLUG);
 
-  if (out && typeof out.then === 'function') {
-    out.then(logResult).catch((e) => {
-      console.error('[migrateModelImagesToB2] Erro:', e.message);
-      process.exit(1);
-    });
-    return;
-  }
-
-  logResult(out);
+  console.log('[migrateModelImagesToB2] UPLOADS_DIR:', config.uploadsDir);
+  console.log('[migrateModelImagesToB2] Nova URL (storage.saveFile):', newUrl);
+  console.log('[migrateModelImagesToB2] cover_image atualizado no banco (linhas alteradas):', upd.changes);
 }
 
-try {
-  main();
-} catch (e) {
+main().catch((e) => {
   console.error('[migrateModelImagesToB2] Erro:', e.message);
   process.exit(1);
-}
+});
