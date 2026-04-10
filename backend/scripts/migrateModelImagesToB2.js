@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Um único modelo (TARGET_SLUG): lê imagem de uploads/ no disco,
- * grava via storage.saveFile, atualiza cover_image no SQLite com a nova URL.
+ * grava via storage.saveFile, atualiza media[0].url (e thumb se existir) com a nova URL.
  */
 
 const path = require('path');
@@ -108,13 +108,35 @@ async function main() {
   const originalname = originalnameForSave(absPath, row.slug);
   const newUrl = await storage.saveFile({ buffer, originalname });
 
-  const upd = db
-    .prepare('UPDATE models SET cover_image = ? WHERE slug = ?')
-    .run(newUrl, TARGET_SLUG);
+  let media;
+  try {
+    media = JSON.parse(row.media || '[]');
+  } catch {
+    media = [];
+  }
+  if (!Array.isArray(media) || media.length === 0) {
+    console.error(
+      `[migrateModelImagesToB2] model.media vazio ou inválido — é necessário pelo menos media[0] (slug="${TARGET_SLUG}").`
+    );
+    process.exit(1);
+  }
+
+  const m0 = media[0];
+  if (m0.type === 'video') {
+    console.error('[migrateModelImagesToB2] media[0] é vídeo; esperado primeiro item de imagem.');
+    process.exit(1);
+  }
+
+  m0.url = newUrl;
+  if (m0.thumb != null && String(m0.thumb).trim() !== '') {
+    m0.thumb = newUrl;
+  }
+
+  const upd = db.prepare('UPDATE models SET media = ? WHERE slug = ?').run(JSON.stringify(media), TARGET_SLUG);
 
   console.log('[migrateModelImagesToB2] UPLOADS_DIR:', config.uploadsDir);
   console.log('[migrateModelImagesToB2] Nova URL (storage.saveFile):', newUrl);
-  console.log('[migrateModelImagesToB2] cover_image atualizado no banco (linhas alteradas):', upd.changes);
+  console.log('[migrateModelImagesToB2] media[0] atualizado no banco (linhas alteradas):', upd.changes);
 }
 
 main().catch((e) => {
