@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Um único modelo (bea-estevam / TARGET_SLUG): lê no disco apenas ficheiros full_* (ex: full_01.jpg),
- * grava via storage.saveFile, atualiza media[0].url com a nova URL. Não altera media[0].thumb.
+ * Modelo TARGET_SLUG: para cada imagem full_* em media[].url e em images[],
+ * envia o ficheiro local a B2 (uma vez por path único) e substitui só as URLs full.
+ * media[i].thumb não é alterado.
  */
 
 const path = require('path');
@@ -13,7 +14,6 @@ const db = require('../src/db');
 const config = require('../src/config');
 const storage = require('../src/services/storage');
 
-/** Apenas este slug é processado. */
 const TARGET_SLUG = 'bea-estevam';
 
 function readUploadsFile(relativeFromUploadsRoot) {
@@ -24,7 +24,6 @@ function readUploadsFile(relativeFromUploadsRoot) {
   return { buffer: fs.readFileSync(fp), absPath: fp };
 }
 
-/** Aceita só imagens "full" (nome contém full_), exclui thumb_. */
 function isFullImageUrl(url) {
   if (!url || typeof url !== 'string') return false;
   const base = path.basename(url.split('?')[0]).toLowerCase();
@@ -32,52 +31,51 @@ function isFullImageUrl(url) {
   return base.includes('full_');
 }
 
-/**
- * Preferência: cover_image, images[], media[].url — apenas URLs /uploads/... com ficheiro full_* existente.
- * Não usa cover_thumb nem media[].thumb como origem.
- */
-function pickLocalUploadsSource(row) {
-  const candidates = [];
+function toRel(url) {
+  const u = String(url).trim();
+  if (!u.startsWith('/uploads/')) return null;
+  return u.replace(/^\/uploads\/?/, '');
+}
 
-  if (row.cover_image?.trim()) {
-    candidates.push({ label: 'cover_image', url: row.cover_image.trim() });
-  }
+/** Recolhe paths relativos únicos (full_*, ficheiro existente) a partir de media e images. */
+function collectFullRels(row) {
+  const relSet = new Set();
 
-  try {
-    const imgs = JSON.parse(row.images || '[]');
-    if (Array.isArray(imgs)) {
-      imgs.forEach((u, i) => {
-        if (u) candidates.push({ label: `images[${i}]`, url: String(u).trim() });
-      });
-    }
-  } catch {
-    /* ignore */
+  function addUrl(u) {
+    if (!u) return;
+    const t = String(u).trim();
+    if (!isFullImageUrl(t)) return;
+    const rel = toRel(t);
+    if (!rel) return;
+    const fp = path.join(config.uploadsDir, rel);
+    if (fs.existsSync(fp)) relSet.add(rel);
   }
 
   try {
     const media = JSON.parse(row.media || '[]');
     if (Array.isArray(media)) {
-      media.forEach((item, i) => {
-        if (item.type === 'video') return;
-        if (item.type && item.type !== 'image') return;
-        if (item.url) candidates.push({ label: `media[${i}].url`, url: String(item.url).trim() });
-      });
+      for (const item of media) {
+        if (item.type === 'video') continue;
+        if (item.type && item.type !== 'image') continue;
+        if (item.url) addUrl(item.url);
+      }
     }
   } catch {
     /* ignore */
   }
 
-  for (const { label, url } of candidates) {
-    if (!url.startsWith('/uploads/')) continue;
-    if (!isFullImageUrl(url)) continue;
-    const rel = url.replace(/^\/uploads\/?/, '');
-    const fp = path.join(config.uploadsDir, rel);
-    if (fs.existsSync(fp)) {
-      return { label, url, rel };
+  try {
+    const imgs = JSON.parse(row.images || '[]');
+    if (Array.isArray(imgs)) {
+      for (const u of imgs) {
+        if (u) addUrl(u);
+      }
     }
+  } catch {
+    /* ignore */
   }
 
-  return null;
+  return relSet;
 }
 
 function originalnameForSave(absPath, slug) {
@@ -88,9 +86,7 @@ function originalnameForSave(absPath, slug) {
 
 async function main() {
   const row = db
-    .prepare(
-      `SELECT id, slug, cover_image, cover_thumb, images, media FROM models WHERE slug = ?`
-    )
+    .prepare(`SELECT id, slug, images, media FROM models WHERE slug = ?`)
     .get(TARGET_SLUG);
 
   if (!row) {
@@ -98,20 +94,25 @@ async function main() {
     process.exit(1);
   }
 
-  const picked = pickLocalUploadsSource(row);
-  if (!picked) {
+  const relSet = collectFullRels(row);
+  if (relSet.size === 0) {
     console.error(
-      `[migrateModelImagesToB2] Nenhuma imagem full_* local (/uploads/... existente) para slug="${TARGET_SLUG}".`
+      `[migrateModelImagesToB2] Nenhuma imagem full_* local (/uploads/...) em media ou images para slug="${TARGET_SLUG}".`
     );
     process.exit(1);
   }
 
   console.log('[migrateModelImagesToB2] Modelo:', { id: row.id, slug: row.slug });
-  console.log('[migrateModelImagesToB2] Origem (full_*):', picked.label, '→', picked.url);
+  console.log('[migrateModelImagesToB2] Ficheiros full_* únicos a enviar:', relSet.size);
 
-  const { buffer, absPath } = readUploadsFile(picked.rel);
-  const originalname = originalnameForSave(absPath, row.slug);
-  const newUrl = await storage.saveFile({ buffer, originalname });
+  const relToNewUrl = new Map();
+  for (const rel of relSet) {
+    const { buffer, absPath } = readUploadsFile(rel);
+    const originalname = originalnameForSave(absPath, row.slug);
+    const newUrl = await storage.saveFile({ buffer, originalname });
+    relToNewUrl.set(rel, newUrl);
+    console.log('[migrateModelImagesToB2]', rel, '→', newUrl);
+  }
 
   let media;
   try {
@@ -119,27 +120,42 @@ async function main() {
   } catch {
     media = [];
   }
-  if (!Array.isArray(media) || media.length === 0) {
-    console.error(
-      `[migrateModelImagesToB2] model.media vazio ou inválido — é necessário pelo menos media[0] (slug="${TARGET_SLUG}").`
-    );
-    process.exit(1);
+  if (!Array.isArray(media)) media = [];
+
+  for (let i = 0; i < media.length; i++) {
+    const item = media[i];
+    if (item.type === 'video') continue;
+    if (item.type && item.type !== 'image') continue;
+    if (!item.url) continue;
+    const rel = toRel(String(item.url).trim());
+    if (rel && relToNewUrl.has(rel)) {
+      item.url = relToNewUrl.get(rel);
+    }
   }
 
-  const m0 = media[0];
-  if (m0.type === 'video') {
-    console.error('[migrateModelImagesToB2] media[0] é vídeo; esperado primeiro item de imagem.');
-    process.exit(1);
+  let imagesArr;
+  try {
+    imagesArr = JSON.parse(row.images || '[]');
+  } catch {
+    imagesArr = [];
+  }
+  if (!Array.isArray(imagesArr)) imagesArr = [];
+
+  for (let j = 0; j < imagesArr.length; j++) {
+    const u = imagesArr[j];
+    if (u == null || u === '') continue;
+    const rel = toRel(String(u).trim());
+    if (rel && relToNewUrl.has(rel)) {
+      imagesArr[j] = relToNewUrl.get(rel);
+    }
   }
 
-  m0.url = newUrl;
-
-  const upd = db.prepare('UPDATE models SET media = ? WHERE slug = ?').run(JSON.stringify(media), TARGET_SLUG);
+  const upd = db
+    .prepare('UPDATE models SET media = ?, images = ? WHERE slug = ?')
+    .run(JSON.stringify(media), JSON.stringify(imagesArr), TARGET_SLUG);
 
   console.log('[migrateModelImagesToB2] UPLOADS_DIR:', config.uploadsDir);
-  console.log('[migrateModelImagesToB2] Nova URL (storage.saveFile):', newUrl);
-  console.log('[migrateModelImagesToB2] media[0].url atualizado; thumb mantido se existia.');
-  console.log('[migrateModelImagesToB2] Linhas alteradas:', upd.changes);
+  console.log('[migrateModelImagesToB2] thumbs em media inalterados; linhas alteradas:', upd.changes);
 }
 
 main().catch((e) => {
