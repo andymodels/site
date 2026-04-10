@@ -106,10 +106,22 @@ function main() {
 
   const { buffer, absPath } = readUploadsFile(picked.rel);
   const originalname = originalnameForSave(absPath, row.slug);
-  const newUrl = storage.saveFile({ buffer, originalname });
+  const out = storage.saveFile({ buffer, originalname });
 
-  console.log('[migrateModelImagesToB2] UPLOADS_DIR:', config.uploadsDir);
-  console.log('[migrateModelImagesToB2] Nova URL (storage.saveFile):', newUrl);
+  function logResult(newUrl) {
+    console.log('[migrateModelImagesToB2] UPLOADS_DIR:', config.uploadsDir);
+    console.log('[migrateModelImagesToB2] Nova URL (storage.saveFile):', newUrl);
+  }
+
+  if (out && typeof out.then === 'function') {
+    out.then(logResult).catch((e) => {
+      console.error('[migrateModelImagesToB2] Erro:', e.message);
+      process.exit(1);
+    });
+    return;
+  }
+
+  logResult(out);
 }
 
 try {
