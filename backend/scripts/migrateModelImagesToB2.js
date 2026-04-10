@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 /**
- * Modelo TARGET_SLUG: para cada imagem full_* em media[].url e em images[],
- * envia o ficheiro local a B2 (uma vez por path único) e substitui só as URLs full.
- * media[i].thumb não é alterado.
+ * Percorre todos os modelos: identifica URLs full_* locais em cover_image, images e media[].url,
+ * envia cada ficheiro único uma vez para o B2, atualiza media (e cover_image / images alinhados).
+ * media[].thumb não é alterado.
+ *
+ * Executar manualmente: node backend/scripts/migrateModelImagesToB2.js
  */
 
 const path = require('path');
@@ -13,8 +15,6 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const db = require('../src/db');
 const config = require('../src/config');
 const storage = require('../src/services/storage');
-
-const TARGET_SLUG = 'bea-estevam';
 
 function readUploadsFile(relativeFromUploadsRoot) {
   const fp = path.join(config.uploadsDir, relativeFromUploadsRoot);
@@ -37,7 +37,7 @@ function toRel(url) {
   return u.replace(/^\/uploads\/?/, '');
 }
 
-/** Recolhe paths relativos únicos (full_*, ficheiro existente) a partir de media e images. */
+/** Recolhe paths relativos únicos (full_*, ficheiro existente) por modelo. */
 function collectFullRels(row) {
   const relSet = new Set();
 
@@ -50,6 +50,8 @@ function collectFullRels(row) {
     const fp = path.join(config.uploadsDir, rel);
     if (fs.existsSync(fp)) relSet.add(rel);
   }
+
+  if (row.cover_image?.trim()) addUrl(row.cover_image.trim());
 
   try {
     const media = JSON.parse(row.media || '[]');
@@ -78,43 +80,20 @@ function collectFullRels(row) {
   return relSet;
 }
 
-function originalnameForSave(absPath, slug) {
+function originalnameForSave(absPath) {
   const base = path.basename(absPath);
-  if (base && base !== '.') return `${slug}-${base}`;
-  return `${slug}-image.jpg`;
+  if (base && base !== '.') return `migrate-${base}`;
+  return 'migrate-image.jpg';
 }
 
-async function main() {
-  const row = db
-    .prepare(`SELECT id, slug, images, media FROM models WHERE slug = ?`)
-    .get(TARGET_SLUG);
-
-  if (!row) {
-    console.error(`[migrateModelImagesToB2] Modelo não encontrado: slug="${TARGET_SLUG}"`);
-    process.exit(1);
+function applyRelMapToRow(row, relToNewUrl) {
+  let cover = row.cover_image;
+  if (cover != null && String(cover).trim() !== '') {
+    const rel = toRel(String(cover).trim());
+    if (rel && relToNewUrl.has(rel)) cover = relToNewUrl.get(rel);
   }
 
-  const relSet = collectFullRels(row);
-  if (relSet.size === 0) {
-    console.error(
-      `[migrateModelImagesToB2] Nenhuma imagem full_* local (/uploads/...) em media ou images para slug="${TARGET_SLUG}".`
-    );
-    process.exit(1);
-  }
-
-  console.log('[migrateModelImagesToB2] Modelo:', { id: row.id, slug: row.slug });
-  console.log('[migrateModelImagesToB2] Ficheiros full_* únicos a enviar:', relSet.size);
-
-  const relToNewUrl = new Map();
-  for (const rel of relSet) {
-    const { buffer, absPath } = readUploadsFile(rel);
-    const originalname = originalnameForSave(absPath, row.slug);
-    const newUrl = await storage.saveFile({ buffer, originalname });
-    relToNewUrl.set(rel, newUrl);
-    console.log('[migrateModelImagesToB2]', rel, '→', newUrl);
-  }
-
-  let media;
+  let media = [];
   try {
     media = JSON.parse(row.media || '[]');
   } catch {
@@ -133,7 +112,7 @@ async function main() {
     }
   }
 
-  let imagesArr;
+  let imagesArr = [];
   try {
     imagesArr = JSON.parse(row.images || '[]');
   } catch {
@@ -150,12 +129,60 @@ async function main() {
     }
   }
 
-  const upd = db
-    .prepare('UPDATE models SET media = ?, images = ? WHERE slug = ?')
-    .run(JSON.stringify(media), JSON.stringify(imagesArr), TARGET_SLUG);
+  return {
+    cover_image: cover,
+    media: JSON.stringify(media),
+    images: JSON.stringify(imagesArr),
+  };
+}
 
+async function main() {
+  const allRows = db.prepare('SELECT id, slug, cover_image, images, media FROM models ORDER BY id').all();
+
+  const globalRelSet = new Set();
+  for (const row of allRows) {
+    for (const rel of collectFullRels(row)) {
+      globalRelSet.add(rel);
+    }
+  }
+
+  console.log('[migrateModelImagesToB2] Modelos na base:', allRows.length);
+  console.log('[migrateModelImagesToB2] Ficheiros full_* únicos (global):', globalRelSet.size);
   console.log('[migrateModelImagesToB2] UPLOADS_DIR:', config.uploadsDir);
-  console.log('[migrateModelImagesToB2] thumbs em media inalterados; linhas alteradas:', upd.changes);
+
+  const relToNewUrl = new Map();
+
+  if (globalRelSet.size > 0) {
+    for (const rel of globalRelSet) {
+      const { buffer, absPath } = readUploadsFile(rel);
+      const originalname = originalnameForSave(absPath);
+      const newUrl = await storage.saveFile({ buffer, originalname });
+      relToNewUrl.set(rel, newUrl);
+      console.log('[migrateModelImagesToB2]', rel, '→', newUrl);
+    }
+  }
+
+  const updStmt = db.prepare(
+    'UPDATE models SET cover_image = ?, images = ?, media = ? WHERE id = ?'
+  );
+
+  let modelsProcessed = 0;
+  for (const row of allRows) {
+    const { cover_image, images, media } = applyRelMapToRow(row, relToNewUrl);
+    updStmt.run(
+      cover_image == null ? null : cover_image,
+      images,
+      media,
+      row.id
+    );
+    modelsProcessed += 1;
+  }
+
+  const totalImagensEnviadas = relToNewUrl.size;
+
+  console.log('[migrateModelImagesToB2] ——');
+  console.log('[migrateModelImagesToB2] Total de modelos processados:', modelsProcessed);
+  console.log('[migrateModelImagesToB2] Total de imagens enviadas:', totalImagensEnviadas);
 }
 
 main().catch((e) => {
