@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Um único modelo (TARGET_SLUG): lê imagem de uploads/ no disco,
- * grava via storage.saveFile, atualiza media[0].url (e thumb se existir) com a nova URL.
+ * Um único modelo (bea-estevam / TARGET_SLUG): lê no disco apenas ficheiros full_* (ex: full_01.jpg),
+ * grava via storage.saveFile, atualiza media[0].url com a nova URL. Não altera media[0].thumb.
  */
 
 const path = require('path');
@@ -13,7 +13,7 @@ const db = require('../src/db');
 const config = require('../src/config');
 const storage = require('../src/services/storage');
 
-/** Slug do modelo a processar (editar aqui). */
+/** Apenas este slug é processado. */
 const TARGET_SLUG = 'bea-estevam';
 
 function readUploadsFile(relativeFromUploadsRoot) {
@@ -24,18 +24,23 @@ function readUploadsFile(relativeFromUploadsRoot) {
   return { buffer: fs.readFileSync(fp), absPath: fp };
 }
 
+/** Aceita só imagens "full" (nome contém full_), exclui thumb_. */
+function isFullImageUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  const base = path.basename(url.split('?')[0]).toLowerCase();
+  if (base.includes('thumb_')) return false;
+  return base.includes('full_');
+}
+
 /**
- * Preferência: cover_image com caminho /uploads/... existente;
- * senão primeira URL em `images` ou `media` (imagem) que aponte a um ficheiro existente em disco.
+ * Preferência: cover_image, images[], media[].url — apenas URLs /uploads/... com ficheiro full_* existente.
+ * Não usa cover_thumb nem media[].thumb como origem.
  */
 function pickLocalUploadsSource(row) {
   const candidates = [];
 
   if (row.cover_image?.trim()) {
     candidates.push({ label: 'cover_image', url: row.cover_image.trim() });
-  }
-  if (row.cover_thumb?.trim()) {
-    candidates.push({ label: 'cover_thumb', url: row.cover_thumb.trim() });
   }
 
   try {
@@ -56,7 +61,6 @@ function pickLocalUploadsSource(row) {
         if (item.type === 'video') return;
         if (item.type && item.type !== 'image') return;
         if (item.url) candidates.push({ label: `media[${i}].url`, url: String(item.url).trim() });
-        if (item.thumb) candidates.push({ label: `media[${i}].thumb`, url: String(item.thumb).trim() });
       });
     }
   } catch {
@@ -65,6 +69,7 @@ function pickLocalUploadsSource(row) {
 
   for (const { label, url } of candidates) {
     if (!url.startsWith('/uploads/')) continue;
+    if (!isFullImageUrl(url)) continue;
     const rel = url.replace(/^\/uploads\/?/, '');
     const fp = path.join(config.uploadsDir, rel);
     if (fs.existsSync(fp)) {
@@ -96,13 +101,13 @@ async function main() {
   const picked = pickLocalUploadsSource(row);
   if (!picked) {
     console.error(
-      `[migrateModelImagesToB2] Nenhuma imagem local (/uploads/... com ficheiro existente) para slug="${TARGET_SLUG}".`
+      `[migrateModelImagesToB2] Nenhuma imagem full_* local (/uploads/... existente) para slug="${TARGET_SLUG}".`
     );
     process.exit(1);
   }
 
   console.log('[migrateModelImagesToB2] Modelo:', { id: row.id, slug: row.slug });
-  console.log('[migrateModelImagesToB2] Origem:', picked.label, '→', picked.url);
+  console.log('[migrateModelImagesToB2] Origem (full_*):', picked.label, '→', picked.url);
 
   const { buffer, absPath } = readUploadsFile(picked.rel);
   const originalname = originalnameForSave(absPath, row.slug);
@@ -128,15 +133,13 @@ async function main() {
   }
 
   m0.url = newUrl;
-  if (m0.thumb != null && String(m0.thumb).trim() !== '') {
-    m0.thumb = newUrl;
-  }
 
   const upd = db.prepare('UPDATE models SET media = ? WHERE slug = ?').run(JSON.stringify(media), TARGET_SLUG);
 
   console.log('[migrateModelImagesToB2] UPLOADS_DIR:', config.uploadsDir);
   console.log('[migrateModelImagesToB2] Nova URL (storage.saveFile):', newUrl);
-  console.log('[migrateModelImagesToB2] media[0] atualizado no banco (linhas alteradas):', upd.changes);
+  console.log('[migrateModelImagesToB2] media[0].url atualizado; thumb mantido se existia.');
+  console.log('[migrateModelImagesToB2] Linhas alteradas:', upd.changes);
 }
 
 main().catch((e) => {
