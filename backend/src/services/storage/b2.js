@@ -72,9 +72,9 @@ module.exports = {
   async saveFile(file) {
     const { bucket, publicBase } = requiredEnv();
     const ext = path.extname(file.originalname) || '.bin';
-    const key = `${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`;
+    const key = file.key || `${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`;
     const client = getClient();
-    const contentType = file.mimetype || guessContentType(ext);
+    const contentType = file.mimetype || guessContentType(path.extname(key) || ext);
 
     await client.send(
       new PutObjectCommand({

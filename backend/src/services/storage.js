@@ -32,6 +32,17 @@ module.exports = {
    */
   deleteFile(url) {
     if (url == null || url === '') return;
+    // Legado: paths /uploads/... só existem no disco local; com B2 não há objeto a apagar.
+    if (typeof url === 'string' && url.startsWith('/uploads/')) {
+      if (config.storageDriver === 'local') {
+        try {
+          return driver().deleteFile(url);
+        } catch (e) {
+          return Promise.reject(e);
+        }
+      }
+      return Promise.resolve();
+    }
     try {
       return driver().deleteFile(url);
     } catch (e) {

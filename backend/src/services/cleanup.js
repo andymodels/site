@@ -2,6 +2,7 @@ const fs   = require('fs');
 const path = require('path');
 const db   = require('../db');
 const config = require('../config');
+const storage = require('./storage');
 
 const TEMP_DIR       = path.join(config.uploadsDir, 'temp');
 const PHOTO_MAX_MS   = 30 * 24 * 60 * 60 * 1000;  // 30 dias
@@ -26,34 +27,35 @@ function cleanTempPhotos() {
   if (removed) console.log(`[cleanup] ${removed} foto(s) temporária(s) removida(s)`);
 }
 
-function cleanOldApplications() {
+async function cleanOldApplications() {
   const cutoff = new Date(Date.now() - APP_MAX_MS).toISOString().slice(0, 10);
-  const old = db.prepare("SELECT id, photos FROM applications WHERE created_at < ?").all(cutoff);
+  const old = db.prepare(
+    'SELECT id, photos, thumb_url, pdf_url FROM applications WHERE created_at < ?'
+  ).all(cutoff);
   if (!old.length) return;
 
   for (const app of old) {
-    // Remover fotos do disco antes de apagar o registro
     try {
-      JSON.parse(app.photos || '[]').forEach(p => {
-        const abs = path.join(__dirname, '../../../', p);
-        if (fs.existsSync(abs)) fs.unlinkSync(abs);
-      });
+      const urls = JSON.parse(app.photos || '[]');
+      for (const u of urls) await storage.deleteFile(u);
+    } catch {}
+    try {
+      await storage.deleteFile(app.thumb_url);
+      await storage.deleteFile(app.pdf_url);
     } catch {}
     db.prepare('DELETE FROM applications WHERE id = ?').run(app.id);
   }
   console.log(`[cleanup] ${old.length} inscrição(ões) com mais de 6 meses removida(s)`);
 }
 
-function runCleanup() {
-  try { cleanTempPhotos(); }      catch (e) { console.error('[cleanup] Erro fotos:', e.message); }
-  try { cleanOldApplications(); } catch (e) { console.error('[cleanup] Erro apps:',  e.message); }
+async function runCleanup() {
+  try { cleanTempPhotos(); } catch (e) { console.error('[cleanup] Erro fotos:', e.message); }
+  try { await cleanOldApplications(); } catch (e) { console.error('[cleanup] Erro apps:', e.message); }
 }
 
 function startCleanupScheduler() {
-  // Rodar uma vez ao iniciar (horário aleatório para não sobrecarregar)
-  setTimeout(runCleanup, 5 * 60 * 1000); // 5 min após boot
-  // Depois uma vez por dia (24h)
-  setInterval(runCleanup, 24 * 60 * 60 * 1000);
+  setTimeout(() => runCleanup().catch(e => console.error('[cleanup]', e.message)), 5 * 60 * 1000);
+  setInterval(() => runCleanup().catch(e => console.error('[cleanup]', e.message)), 24 * 60 * 60 * 1000);
   console.log('[cleanup] Agendamento de limpeza automática ativado');
 }
 
