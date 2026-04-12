@@ -92,7 +92,7 @@ function fmt(s) {
 }
 
 export default function RadioHubPage() {
-  const { lang, t } = useLanguage();
+  const { lang } = useLanguage();
   const [playlists, setPlaylists] = useState(() => MOCK_PLAYLISTS(lang));
   const [selectedId, setSelectedId] = useState('hits');
   const [trackIdx, setTrackIdx] = useState(0);
@@ -283,8 +283,7 @@ export default function RadioHubPage() {
               </svg>
             </div>
             <div>
-              <p className="text-[10px] tracking-[0.25em] uppercase font-semibold text-gray-800">Andy Radio</p>
-              <p className="text-[8px] tracking-widest uppercase text-gray-400">{t.radio?.by || 'Andy Models'}</p>
+              <p className="text-[10px] tracking-[0.25em] uppercase font-semibold text-gray-800">AndyRadio</p>
             </div>
           </div>
           <img src="/logo.png" alt="" className="h-9 w-auto object-contain opacity-90" />
@@ -330,9 +329,20 @@ export default function RadioHubPage() {
 
             {/* Center: now playing */}
             <div className="lg:col-span-4 p-5 sm:p-6 flex flex-col items-center border-t lg:border-t-0 border-gray-100">
-              <div className="w-full max-w-[252px] aspect-square rounded-lg overflow-hidden shadow-md mb-5 bg-gray-100">
+              <div className="w-full max-w-[252px] aspect-square rounded-lg overflow-hidden shadow-md mb-4 bg-gray-100">
                 <img src={coverSrc} alt="" className="w-full h-full object-cover" />
               </div>
+              <p className="text-[10px] sm:text-[11px] tracking-[0.18em] uppercase text-center text-gray-500 mb-4 px-2">
+                {lang === 'pt' ? (
+                  <>
+                    Curadoria by <span className="text-gray-800 font-medium">OldPlay</span>
+                  </>
+                ) : (
+                  <>
+                    Curation by <span className="text-gray-800 font-medium">OldPlay</span>
+                  </>
+                )}
+              </p>
               <h2 className="text-base font-bold text-gray-900 text-center w-full truncate px-2">
                 {track?.title || '—'}
               </h2>
