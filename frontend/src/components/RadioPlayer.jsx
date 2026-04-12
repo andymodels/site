@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useRadio } from '../context/RadioContext';
 
 const SPOTIFY_URL = 'https://open.spotify.com/playlist/5VPrfar0asi3UqDAa5emps';
@@ -9,9 +10,11 @@ function fmt(s) {
 }
 
 export default function RadioPlayer() {
+  const { pathname } = useLocation();
   const radio = useRadio();
   const [visible, setVisible] = useState(true);
 
+  if (pathname === '/radio') return null;
   if (!radio || !radio.tracks.length || !visible) return null;
 
   const { track, playing, progress, duration, togglePlay, prev, next, seek, tracks } = radio;

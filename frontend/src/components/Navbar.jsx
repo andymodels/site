@@ -52,6 +52,16 @@ export default function Navbar() {
               ))}
             </nav>
 
+            <span className="text-gray-200 text-lg font-light select-none" aria-hidden="true">·</span>
+            <Link
+              to="/radio"
+              className={`text-[11px] tracking-[0.2em] uppercase transition-colors whitespace-nowrap ${
+                pathname === '/radio' ? 'text-[#F27121] font-medium' : 'text-gray-400 hover:text-[#F27121]'
+              }`}
+            >
+              {lang === 'pt' ? 'Rádio' : 'Radio'}
+            </Link>
+
             {/* Language toggle */}
             <button
               onClick={toggle}
@@ -105,6 +115,15 @@ export default function Navbar() {
                 {label}
               </Link>
             ))}
+            <Link
+              to="/radio"
+              onClick={() => setOpen(false)}
+              className={`text-[13px] tracking-[0.2em] uppercase mt-4 ${
+                pathname === '/radio' ? 'text-[#F27121] font-medium' : 'text-gray-500'
+              }`}
+            >
+              {lang === 'pt' ? 'Rádio' : 'Radio'}
+            </Link>
           </nav>
           <button
             className="absolute top-6 right-6 text-[11px] tracking-widest uppercase text-gray-400"

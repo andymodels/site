@@ -19,6 +19,7 @@ import AdminHome from './pages/admin/AdminHome';
 import AdminRadioPage from './pages/admin/AdminRadioPage';
 import AdminApplications from './pages/admin/AdminApplications';
 import AdminInstagram from './pages/admin/AdminInstagram';
+import RadioHubPage from './pages/RadioHubPage';
 
 export default function App() {
   return (
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="/about" element={<AboutPage />} />
             <Route path="/inscreva-se" element={<InscrevaPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/radio" element={<RadioHubPage />} />
 
             <Route path="/admin" element={<AdminLogin />} />
             <Route

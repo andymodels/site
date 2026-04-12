@@ -5,7 +5,7 @@ export default function RadioMini() {
   const radio = useRadio();
   const { pathname } = useLocation();
   if (!radio || !radio.tracks.length) return null;
-  if (pathname.startsWith('/admin')) return null;
+  if (pathname.startsWith('/admin') || pathname === '/radio') return null;
 
   const { playing, togglePlay } = radio;
 
