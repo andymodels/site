@@ -34,15 +34,17 @@ export function RadioProvider({ children }) {
   }, []);
 
   const track = queue[idx];
+  const playingRef = useRef(playing);
+  playingRef.current = playing;
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !track) return;
-    const wasPlaying = playing;
+    if (!audio || !track?.url) return;
+    const wasPlaying = playingRef.current;
     audio.src = track.url;
     audio.load();
-    if (wasPlaying) audio.play().catch(() => {});
-  }, [idx, queue]);
+    if (wasPlaying) audio.play().catch(() => setPlaying(false));
+  }, [idx, queue, track?.url]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -91,7 +93,7 @@ export function RadioProvider({ children }) {
 
   return (
     <RadioContext.Provider value={{ tracks, track, playing, progress, duration, togglePlay, prev, next, seek, audioRef }}>
-      <audio ref={audioRef} preload="metadata" />
+      <audio ref={audioRef} preload="metadata" className="hidden" playsInline />
       {children}
     </RadioContext.Provider>
   );

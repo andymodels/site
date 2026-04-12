@@ -21,7 +21,7 @@ export default function RadioPlayer() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-black text-white select-none">
-      <audio ref={radio.audioRef} preload="metadata" className="hidden" />
+      {/* Áudio único vem do RadioProvider — não duplicar ref aqui (quebrava play/pause e o mini ON/OFF) */}
 
       {/* Progress bar */}
       <div
