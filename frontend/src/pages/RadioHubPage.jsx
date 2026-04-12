@@ -93,7 +93,6 @@ function fmt(s) {
 
 export default function RadioHubPage() {
   const { lang, t } = useLanguage();
-  const [tab, setTab] = useState('playlists');
   const [playlists, setPlaylists] = useState(() => MOCK_PLAYLISTS(lang));
   const [selectedId, setSelectedId] = useState('hits');
   const [trackIdx, setTrackIdx] = useState(0);
@@ -245,7 +244,7 @@ export default function RadioHubPage() {
     >
       <audio ref={audioRef} className="hidden" preload="metadata" />
 
-      <div className="max-w-6xl mx-auto mb-6 flex items-center justify-between">
+      <div className="max-w-[64.8rem] mx-auto mb-5 flex items-center justify-between px-1">
         <Link
           to="/"
           className="text-[10px] tracking-[0.2em] uppercase text-gray-400 hover:text-black transition-colors"
@@ -261,17 +260,17 @@ export default function RadioHubPage() {
       </div>
 
       <div
-        className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-100/80 overflow-hidden"
-        style={{ boxShadow: '0 25px 50px -12px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02)' }}
+        className="max-w-[64.8rem] w-[94%] mx-auto bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-100/80 overflow-hidden"
+        style={{ boxShadow: '0 22px 44px -12px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.02)' }}
       >
         {/* Header card */}
-        <div className="flex items-center justify-between px-6 sm:px-8 py-5 border-b border-gray-100">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2.5">
             <div
-              className="w-12 h-12 rounded-full flex items-center justify-center"
+              className="w-10 h-10 rounded-full flex items-center justify-center"
               style={{ background: `${ORANGE}18` }}
             >
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <circle cx="12" cy="12" r="10" stroke={ORANGE} strokeWidth="1.5" opacity="0.35" />
                 <path
                   d="M12 6v6l4 2"
@@ -284,54 +283,17 @@ export default function RadioHubPage() {
               </svg>
             </div>
             <div>
-              <p className="text-[11px] tracking-[0.25em] uppercase font-semibold text-gray-800">Andy Radio</p>
-              <p className="text-[9px] tracking-widest uppercase text-gray-400">{t.radio?.by || 'Andy Models'}</p>
+              <p className="text-[10px] tracking-[0.25em] uppercase font-semibold text-gray-800">Andy Radio</p>
+              <p className="text-[8px] tracking-widest uppercase text-gray-400">{t.radio?.by || 'Andy Models'}</p>
             </div>
           </div>
-          <img src="/logo.png" alt="" className="h-11 w-auto object-contain opacity-90" />
+          <img src="/logo.png" alt="" className="h-9 w-auto object-contain opacity-90" />
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-10 px-6 sm:px-8 pt-6 border-b border-gray-50">
-          <button
-            type="button"
-            onClick={() => setTab('playlists')}
-            className={`pb-3 text-[10px] tracking-[0.2em] uppercase transition-colors border-b-2 -mb-px ${
-              tab === 'playlists'
-                ? 'font-bold text-gray-900 border-current'
-                : 'font-normal text-gray-400 border-transparent hover:text-gray-600'
-            }`}
-            style={tab === 'playlists' ? { borderColor: ORANGE, color: '#111' } : {}}
-          >
-            {lang === 'pt' ? 'Playlist' : 'Playlists'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab('mine')}
-            className={`pb-3 text-[10px] tracking-[0.2em] uppercase transition-colors border-b-2 -mb-px ${
-              tab === 'mine'
-                ? 'font-bold text-gray-900 border-current'
-                : 'font-normal text-gray-400 border-transparent hover:text-gray-600'
-            }`}
-            style={tab === 'mine' ? { borderColor: ORANGE, color: '#111' } : {}}
-          >
-            {lang === 'pt' ? 'Minhas playlists' : 'My playlists'}
-          </button>
-        </div>
-
-        {tab === 'mine' ? (
-          <div className="p-12 text-center">
-            <p className="text-sm text-gray-500 font-light max-w-md mx-auto">
-              {lang === 'pt'
-                ? 'Área reservada para playlists personalizadas (ex.: conta no futuro). Nesta prévia, use a aba Playlist.'
-                : 'Reserved for personalized playlists. In this preview, use the Playlists tab.'}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-0 divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-0 divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
             {/* Left: grid playlists */}
-            <div className="lg:col-span-4 p-5 sm:p-6 max-h-[min(70vh,640px)] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-3">
+            <div className="lg:col-span-4 p-4 sm:p-5 max-h-[min(63vh,576px)] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-2.5">
                 {playlists.map((pl) => (
                   <button
                     key={pl.id}
@@ -367,14 +329,14 @@ export default function RadioHubPage() {
             </div>
 
             {/* Center: now playing */}
-            <div className="lg:col-span-4 p-6 sm:p-8 flex flex-col items-center border-t lg:border-t-0 border-gray-100">
-              <div className="w-full max-w-[280px] aspect-square rounded-xl overflow-hidden shadow-lg mb-6 bg-gray-100">
+            <div className="lg:col-span-4 p-5 sm:p-6 flex flex-col items-center border-t lg:border-t-0 border-gray-100">
+              <div className="w-full max-w-[252px] aspect-square rounded-lg overflow-hidden shadow-md mb-5 bg-gray-100">
                 <img src={coverSrc} alt="" className="w-full h-full object-cover" />
               </div>
-              <h2 className="text-lg font-bold text-gray-900 text-center w-full truncate px-2">
+              <h2 className="text-base font-bold text-gray-900 text-center w-full truncate px-2">
                 {track?.title || '—'}
               </h2>
-              <p className="text-sm text-gray-500 mt-1 text-center truncate w-full px-2">{track?.artist || '—'}</p>
+              <p className="text-[13px] text-gray-500 mt-1 text-center truncate w-full px-2">{track?.artist || '—'}</p>
 
               {!track?.url && (
                 <p className="text-[10px] text-amber-600 mt-2 text-center">
@@ -384,7 +346,7 @@ export default function RadioHubPage() {
                 </p>
               )}
 
-              <div className="w-full mt-6 space-y-2">
+              <div className="w-full mt-5 space-y-2">
                 <div className="flex justify-between text-[10px] tabular-nums text-gray-400">
                   <span>{fmt(progress)}</span>
                   <span>{fmt(duration)}</span>
@@ -402,7 +364,7 @@ export default function RadioHubPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-center gap-4 mt-6">
+              <div className="flex items-center justify-center gap-3 mt-5">
                 <button
                   type="button"
                   onClick={() => setShuffle((s) => !s)}
@@ -423,7 +385,7 @@ export default function RadioHubPage() {
                   type="button"
                   onClick={togglePlay}
                   disabled={!track?.url}
-                  className="w-14 h-14 rounded-full flex items-center justify-center text-white disabled:opacity-35 disabled:cursor-not-allowed shadow-lg"
+                  className="w-12 h-12 rounded-full flex items-center justify-center text-white disabled:opacity-35 disabled:cursor-not-allowed shadow-md"
                   style={{ background: ORANGE }}
                   aria-label={playing ? 'Pause' : 'Play'}
                 >
@@ -433,7 +395,7 @@ export default function RadioHubPage() {
                       <span className="w-1.5 h-5 bg-white rounded-sm" />
                     </span>
                   ) : (
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="white" className="ml-1">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="white" className="ml-0.5">
                       <path d="M8 5v14l11-7z" />
                     </svg>
                   )}
@@ -458,7 +420,7 @@ export default function RadioHubPage() {
             </div>
 
             {/* Right: queue */}
-            <div className="lg:col-span-4 p-5 sm:p-6 flex flex-col max-h-[min(70vh,640px)] border-t lg:border-t-0 border-gray-100">
+            <div className="lg:col-span-4 p-4 sm:p-5 flex flex-col max-h-[min(63vh,576px)] border-t lg:border-t-0 border-gray-100">
               <p className="text-[10px] tracking-[0.15em] uppercase text-gray-500 mb-4">
                 {lang === 'pt' ? 'Tocando agora: ' : 'Now playing: '}
                 <span className="text-gray-900 font-semibold">{selected?.title}</span>
@@ -513,7 +475,6 @@ export default function RadioHubPage() {
               </div>
             </div>
           </div>
-        )}
       </div>
     </main>
   );
