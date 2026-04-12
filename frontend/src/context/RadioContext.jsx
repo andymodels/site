@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { RADIO_FEED_URL, parseRadioFeedJson } from '../config/radio';
 
 const RadioContext = createContext(null);
 
@@ -24,9 +25,10 @@ export function RadioProvider({ children }) {
   useEffect(() => {
     if (loadedRef.current) return;
     loadedRef.current = true;
-    fetch('/api/radio')
-      .then(r => r.ok ? r.json() : [])
-      .then(data => {
+    fetch(RADIO_FEED_URL)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((raw) => {
+        const data = parseRadioFeedJson(raw);
         setTracks(data);
         setQueue(shuffle(data));
       })

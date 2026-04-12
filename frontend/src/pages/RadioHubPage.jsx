@@ -1,88 +1,9 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
+import { RADIO_FEED_URL, parseRadioHubPlaylists } from '../config/radio';
 
 const ORANGE = '#F27121';
-
-/** Playlists de exemplo — só faixas com `url` tocam; resto é visual de prévia */
-const MOCK_PLAYLISTS = (lang) => [
-  {
-    id: 'hits',
-    title: lang === 'pt' ? 'HITS DO MOMENTO' : 'CURRENT HITS',
-    description: lang === 'pt' ? 'O que está em alta na nossa seleção.' : 'What’s trending in our pick.',
-    cover: 'https://picsum.photos/seed/hits/400/400',
-    tracks: [
-      { id: 'h1', title: 'Coração Partido', artist: 'Luana Silva', thumb: 'https://picsum.photos/seed/h1/80/80', url: null },
-      { id: 'h2', title: 'Noite de Verão', artist: 'Banda Aurora', thumb: 'https://picsum.photos/seed/h2/80/80', url: null },
-      { id: 'h3', title: 'Luzes da Cidade', artist: 'DJ Norte', thumb: 'https://picsum.photos/seed/h3/80/80', url: null },
-    ],
-  },
-  {
-    id: 'manha',
-    title: lang === 'pt' ? 'MANHÃ ENERGÉTICA' : 'ENERGETIC MORNING',
-    description: lang === 'pt' ? 'Para começar o dia ligado.' : 'To start the day wired.',
-    cover: 'https://picsum.photos/seed/manha/400/400',
-    tracks: Array.from({ length: 4 }, (_, i) => ({
-      id: `m${i}`,
-      title: `Faixa ${i + 1}`,
-      artist: 'Artista demo',
-      thumb: `https://picsum.photos/seed/m${i}/80/80`,
-      url: null,
-    })),
-  },
-  {
-    id: 'chill',
-    title: lang === 'pt' ? 'RÁDIO CHILLOUT' : 'CHILLOUT RADIO',
-    description: lang === 'pt' ? 'Respirar e relaxar.' : 'Breathe and unwind.',
-    cover: 'https://picsum.photos/seed/chill/400/400',
-    tracks: Array.from({ length: 5 }, (_, i) => ({
-      id: `c${i}`,
-      title: `Chill ${i + 1}`,
-      artist: 'Lo-Fi Collective',
-      thumb: `https://picsum.photos/seed/c${i}/80/80`,
-      url: null,
-    })),
-  },
-  {
-    id: 'night',
-    title: lang === 'pt' ? 'NOITE' : 'NIGHT',
-    description: lang === 'pt' ? 'Depois do pôr do sol.' : 'After sunset.',
-    cover: 'https://picsum.photos/seed/night/400/400',
-    tracks: Array.from({ length: 3 }, (_, i) => ({
-      id: `n${i}`,
-      title: `Night ${i + 1}`,
-      artist: 'Synth Wave',
-      thumb: `https://picsum.photos/seed/n${i}/80/80`,
-      url: null,
-    })),
-  },
-  {
-    id: 'focus',
-    title: lang === 'pt' ? 'FOCO / TRABALHO' : 'FOCUS',
-    description: lang === 'pt' ? 'Trilha para concentrar.' : 'Concentration tracks.',
-    cover: 'https://picsum.photos/seed/focus/400/400',
-    tracks: Array.from({ length: 4 }, (_, i) => ({
-      id: `f${i}`,
-      title: `Focus ${i + 1}`,
-      artist: 'Ambient Lab',
-      thumb: `https://picsum.photos/seed/f${i}/80/80`,
-      url: null,
-    })),
-  },
-  {
-    id: 'throwback',
-    title: lang === 'pt' ? 'THROWBACK' : 'THROWBACK',
-    description: lang === 'pt' ? 'Clássicos que marcam.' : 'Classics that stick.',
-    cover: 'https://picsum.photos/seed/throw/400/400',
-    tracks: Array.from({ length: 3 }, (_, i) => ({
-      id: `t${i}`,
-      title: `Throwback ${i + 1}`,
-      artist: 'Vintage Set',
-      thumb: `https://picsum.photos/seed/t${i}/80/80`,
-      url: null,
-    })),
-  },
-];
 
 function fmt(s) {
   if (!s || !Number.isFinite(s) || s < 0) return '0:00';
@@ -93,8 +14,9 @@ function fmt(s) {
 
 export default function RadioHubPage() {
   const { lang } = useLanguage();
-  const [playlists, setPlaylists] = useState(() => MOCK_PLAYLISTS(lang));
-  const [selectedId, setSelectedId] = useState('hits');
+  const [playlists, setPlaylists] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState(null);
   const [trackIdx, setTrackIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -112,32 +34,39 @@ export default function RadioHubPage() {
   const track = selected?.tracks?.[trackIdx];
 
   useEffect(() => {
-    setPlaylists(MOCK_PLAYLISTS(lang));
-  }, [lang]);
-
-  useEffect(() => {
-    fetch('/api/radio')
-      .then((r) => (r.ok ? r.json() : []))
-      .then((rows) => {
-        if (!Array.isArray(rows) || rows.length === 0) return;
-        const live = {
-          id: 'live',
-          title: lang === 'pt' ? 'RÁDIO AO VIVO' : 'LIVE RADIO',
-          description: lang === 'pt' ? 'Faixas publicadas no site (reprodução real).' : 'Tracks from the site (real playback).',
-          cover: '/logo.png',
-          tracks: rows.map((r) => ({
-            id: `live-${r.id}`,
-            title: r.title,
-            artist: 'Andy Models Radio',
-            thumb: 'https://picsum.photos/seed/live/80/80',
-            url: r.url,
-          })),
-        };
-        setPlaylists((prev) => [live, ...prev.filter((p) => p.id !== 'live')]);
-        setSelectedId('live');
+    let cancelled = false;
+    setLoading(true);
+    fetch(RADIO_FEED_URL)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((raw) => {
+        if (cancelled) return;
+        if (raw == null) {
+          setPlaylists([]);
+          setSelectedId(null);
+          setTrackIdx(0);
+          return;
+        }
+        const next = parseRadioHubPlaylists(raw, {
+          titleSingle: lang === 'pt' ? 'RÁDIO ANDY MODELS' : 'ANDY MODELS RADIO',
+          descSingle: lang === 'pt' ? 'Conteúdo gerido no CRM.' : 'Content managed in the CRM.',
+        });
+        setPlaylists(next);
+        setSelectedId(next[0]?.id ?? null);
         setTrackIdx(0);
+        setPlaying(false);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) {
+          setPlaylists([]);
+          setSelectedId(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [lang]);
 
   useEffect(() => {
@@ -233,7 +162,7 @@ export default function RadioHubPage() {
     setPlaying(Boolean(nt?.url));
   }
 
-  const coverSrc = track?.thumb?.startsWith('http') ? track.thumb : selected?.cover || 'https://picsum.photos/seed/cover/500/500';
+  const coverSrc = track?.thumb || selected?.cover || '/logo.png';
 
   return (
     <main
@@ -283,6 +212,17 @@ export default function RadioHubPage() {
           <img src="/logo.png" alt="" className="h-9 w-auto object-contain opacity-90" />
         </div>
 
+        {loading ? (
+          <div className="px-6 py-16 text-center text-sm text-gray-500">
+            {lang === 'pt' ? 'A carregar…' : 'Loading…'}
+          </div>
+        ) : playlists.length === 0 ? (
+          <div className="px-6 py-16 text-center text-sm text-gray-600 max-w-md mx-auto">
+            {lang === 'pt'
+              ? 'Não há playlists ou faixas disponíveis. Adiciona conteúdo no CRM.'
+              : 'No playlists or tracks available. Add content in the CRM.'}
+          </div>
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-0 divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
             {/* Left: grid playlists */}
             <div className="lg:col-span-4 p-4 sm:p-5 max-h-[min(63vh,576px)] overflow-y-auto">
@@ -357,14 +297,6 @@ export default function RadioHubPage() {
                 {track?.title || '—'}
               </h2>
               <p className="text-[13px] text-gray-500 mt-1 text-center truncate w-full px-2">{track?.artist || '—'}</p>
-
-              {!track?.url && (
-                <p className="text-[10px] text-amber-600 mt-2 text-center">
-                  {lang === 'pt'
-                    ? 'Faixa de exemplo — reprodução real na playlist “Rádio ao vivo” (se houver áudio no site).'
-                    : 'Demo track — real playback in “Live radio” when tracks exist.'}
-                </p>
-              )}
 
               <div className="w-full mt-5 space-y-2">
                 <div className="flex justify-between text-[10px] tabular-nums text-gray-400">
@@ -470,9 +402,6 @@ export default function RadioHubPage() {
                           {tr.title}
                         </p>
                       </div>
-                      {!tr.url && (
-                        <span className="text-[8px] uppercase text-gray-300 flex-shrink-0">demo</span>
-                      )}
                     </button>
                   </li>
                 ))}
@@ -495,6 +424,7 @@ export default function RadioHubPage() {
               </div>
             </div>
           </div>
+        )}
       </div>
     </main>
   );
