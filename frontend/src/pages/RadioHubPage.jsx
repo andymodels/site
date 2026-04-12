@@ -244,19 +244,13 @@ export default function RadioHubPage() {
     >
       <audio ref={audioRef} className="hidden" preload="metadata" />
 
-      <div className="max-w-[64.8rem] mx-auto mb-5 flex items-center justify-between px-1">
+      <div className="max-w-[64.8rem] mx-auto mb-5 px-1">
         <Link
           to="/"
-          className="text-[10px] tracking-[0.2em] uppercase text-gray-400 hover:text-black transition-colors"
+          className="text-[10px] tracking-[0.2em] uppercase text-gray-400 hover:text-black transition-colors inline-block"
         >
           ← {lang === 'pt' ? 'Voltar' : 'Back'}
         </Link>
-        <span
-          className="text-[9px] tracking-[0.25em] uppercase px-3 py-1 rounded-full border border-orange-200 text-orange-600 bg-white/80"
-          style={{ borderColor: `${ORANGE}55`, color: ORANGE }}
-        >
-          {lang === 'pt' ? 'Prévia de layout' : 'Layout preview'}
-        </span>
       </div>
 
       <div
@@ -329,20 +323,36 @@ export default function RadioHubPage() {
 
             {/* Center: now playing */}
             <div className="lg:col-span-4 p-5 sm:p-6 flex flex-col items-center border-t lg:border-t-0 border-gray-100">
+              <p className="text-[11px] sm:text-xs text-center text-gray-600 mb-4 px-2 w-full max-w-[280px] leading-relaxed">
+                {lang === 'pt' ? (
+                  <>
+                    <span className="text-gray-700">Curadoria by </span>
+                    <a
+                      href="https://www.instagram.com/oldplaydj/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-gray-900 hover:text-[#F27121] transition-colors underline underline-offset-2 decoration-gray-300 hover:decoration-[#F27121]"
+                    >
+                      OldPlay
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-gray-700">Curation by </span>
+                    <a
+                      href="https://www.instagram.com/oldplaydj/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-gray-900 hover:text-[#F27121] transition-colors underline underline-offset-2 decoration-gray-300 hover:decoration-[#F27121]"
+                    >
+                      OldPlay
+                    </a>
+                  </>
+                )}
+              </p>
               <div className="w-full max-w-[252px] aspect-square rounded-lg overflow-hidden shadow-md mb-4 bg-gray-100">
                 <img src={coverSrc} alt="" className="w-full h-full object-cover" />
               </div>
-              <p className="text-[10px] sm:text-[11px] tracking-[0.18em] uppercase text-center text-gray-500 mb-4 px-2">
-                {lang === 'pt' ? 'Curadoria by ' : 'Curation by '}
-                <a
-                  href="https://www.instagram.com/oldplaydj/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-800 font-medium hover:text-[#F27121] transition-colors underline-offset-2 hover:underline"
-                >
-                  OldPlay
-                </a>
-              </p>
               <h2 className="text-base font-bold text-gray-900 text-center w-full truncate px-2">
                 {track?.title || '—'}
               </h2>
