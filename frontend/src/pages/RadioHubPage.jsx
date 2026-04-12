@@ -333,15 +333,15 @@ export default function RadioHubPage() {
                 <img src={coverSrc} alt="" className="w-full h-full object-cover" />
               </div>
               <p className="text-[10px] sm:text-[11px] tracking-[0.18em] uppercase text-center text-gray-500 mb-4 px-2">
-                {lang === 'pt' ? (
-                  <>
-                    Curadoria by <span className="text-gray-800 font-medium">OldPlay</span>
-                  </>
-                ) : (
-                  <>
-                    Curation by <span className="text-gray-800 font-medium">OldPlay</span>
-                  </>
-                )}
+                {lang === 'pt' ? 'Curadoria by ' : 'Curation by '}
+                <a
+                  href="https://www.instagram.com/oldplaydj/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-800 font-medium hover:text-[#F27121] transition-colors underline-offset-2 hover:underline"
+                >
+                  OldPlay
+                </a>
               </p>
               <h2 className="text-base font-bold text-gray-900 text-center w-full truncate px-2">
                 {track?.title || '—'}
